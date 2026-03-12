@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>スロットカー対決！（世界のアソビ大全51風・BOT弱め調整）</title>
+  <title>スロットカー対決！（世界のアソビ大全51風・調整版）</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -18,8 +18,8 @@
       margin-bottom: 10px;
     }
     #track {
-      width: 90%;
-      max-width: 800px;
+      width: 95%;
+      max-width: 1100px;   /* ← コースを大幅に長くした！ */
       height: 180px;
       margin: 30px auto;
       background: linear-gradient(to right, #222, #444);
@@ -108,8 +108,8 @@
 </head>
 <body>
 
-<h1>スロットカー対決！（世界のアソビ大全51風・BOTかなり弱め）</h1>
-<p style="color:#aaa;">アクセル押しっぱなしで加速・離すと減速！<br>長押ししすぎるとコースアウトのリスクあり。<br>BOTを大幅に遅く＆ミス多めにしたよ！</p>
+<h1>スロットカー対決！（世界のアソビ大全51風・最終調整）</h1>
+<p style="color:#aaa;">コースを1.8倍長くしました！<br>BOTはもう加速し続けません（自然に減速＋ミス多め）<br>アクセルは「ポン、ポン、ポン…」と短く連打がコツ！</p>
 
 <div id="track">
   <div class="slot-line"></div>
@@ -134,8 +134,8 @@ const startBtn  = document.getElementById('startBtn');
 const accelBtn  = document.getElementById('accelBtn');
 const resetBtn  = document.getElementById('resetBtn');
 
-const TRACK_WIDTH = document.getElementById('track').clientWidth - 100;
-const FINISH_LINE = TRACK_WIDTH;
+let TRACK_WIDTH = 0;
+let FINISH_LINE = 0;
 
 let playerPos = 0;
 let botPos    = 0;
@@ -171,11 +171,11 @@ function updatePositions(timestamp) {
   const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
 
-  // プレイヤー
+  // === プレイヤー（そのまま）===
   if (isAccelerating) {
-    playerSpeed += 20 * dt;           // 加速を少し上げて遊びやすく
+    playerSpeed += 20 * dt;
     holdDuration += dt;
-    if (holdDuration > 1.2 && Math.random() < 0.18) {  // コースアウト確率を少し下げた
+    if (holdDuration > 1.2 && Math.random() < 0.18) {
       playerSpeed *= 0.3;
       info.textContent = "⚠️ コースアウト！　スピード大ダウン！";
       holdDuration = 0;
@@ -183,21 +183,27 @@ function updatePositions(timestamp) {
   } else {
     holdDuration = 0;
   }
-  playerSpeed *= 0.93;                 // 減速を少し緩やかに
+  playerSpeed *= 0.93;
   playerSpeed = Math.max(0, Math.min(playerSpeed, 38));
-
-  playerPos += playerSpeed * dt * 1400;  // プレイヤー進みやすく調整
+  playerPos += playerSpeed * dt * 1400;
   playerPos = Math.min(playerPos, FINISH_LINE + 50);
 
-  // BOT（かなり弱体化：加速遅く、ミス多め、上限低め）
-  if (Math.random() < 0.75) {          // 加速する確率を下げた（ミス多め）
-    botSpeed += (Math.random() * 0.5 + 0.4);  // 加速量を大幅減
+  // === BOT（ここが大幅変更！）===
+  // 1. 自然減速を必ず入れる（加速し続けなくした）
+  botSpeed *= 0.89;   // ← これで勝手に減速する
+
+  // 2. 加速はたまにしかしない（確率大幅ダウン）
+  if (Math.random() < 0.55) {
+    botSpeed += (Math.random() * 0.45 + 0.35);
   } else {
-    botSpeed *= 0.25;                 // ミス時の減速を強く
-    info.textContent = "BOTがコースアウト！　チャンス！";
+    // ミス多め
+    botSpeed *= 0.22;
+    if (Math.random() < 0.4) {
+      info.textContent = "BOTがコースアウト！　チャンス！";
+    }
   }
-  botSpeed = Math.min(botSpeed, 12);   // 上限をかなり低く（本家「やばい」より遅く）
-  botPos += botSpeed * dt * 1100;      // BOTの進みも遅く
+  botSpeed = Math.min(botSpeed, 11);   // 上限も低め固定
+  botPos += botSpeed * dt * 1050;
   botPos = Math.min(botPos, FINISH_LINE + 50);
 
   // 表示
@@ -211,11 +217,11 @@ function updatePositions(timestamp) {
     accelBtn.disabled = true;
     isAccelerating = false;
 
-    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 30) {
-      info.innerHTML = "🎉 <strong>あなたの勝ち！</strong>　余裕だったね！";
+    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 40) {
+      info.innerHTML = "🎉 <strong>あなたの勝ち！</strong>　完璧！";
       playerCar.textContent = "🚗✨";
-    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 30) {
-      info.innerHTML = "😢 BOTの勝ち…　次はポンピング連打で勝とう！";
+    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 40) {
+      info.innerHTML = "😢 BOTの勝ち…　もう少し長押し短くしてみて！";
       botCar.textContent = "🤖🏆";
     } else {
       info.textContent = "ドロー！　いい勝負だった！";
@@ -227,7 +233,7 @@ function updatePositions(timestamp) {
   requestAnimationFrame(updatePositions);
 }
 
-// アクセル操作（タッチ・クリック両対応）
+// アクセル操作
 accelBtn.addEventListener('mousedown', () => { if (gameRunning) isAccelerating = true; });
 accelBtn.addEventListener('mouseup', () => { isAccelerating = false; });
 accelBtn.addEventListener('mouseleave', () => { isAccelerating = false; });
@@ -235,13 +241,17 @@ accelBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameRun
 accelBtn.addEventListener('touchend', (e) => { e.preventDefault(); isAccelerating = false; });
 
 startBtn.onclick = () => {
+  // コース長を毎回正確に取得（リサイズ対応）
+  TRACK_WIDTH = document.getElementById('track').clientWidth - 100;
+  FINISH_LINE = TRACK_WIDTH * 1.8;   // ← ここでコースを1.8倍長く！
+
   resetGame();
   gameRunning = true;
   playerSpeed = 0;
-  botSpeed = 2 + Math.random() * 2;  // スタート時のBOT速度も低く
+  botSpeed = 1.5 + Math.random() * 1.5;
   holdDuration = 0;
 
-  info.textContent = "レース開始！　アクセルをポン、ポン…と短く連打すると速く走れるよ！";
+  info.textContent = "レース開始！　アクセルは短くポンポン連打が最速！　長押ししすぎ注意！";
   startBtn.disabled = true;
   accelBtn.disabled = false;
 
