@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zero Fighter 3D</title>
+    <title>Zero Fighter Pro 3D</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; font-family: sans-serif; pointer-events: none; }
-        .menu { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 20px; text-align: center;
-            pointer-events: auto; border-radius: 10px; z-index: 100;
+        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: sans-serif; }
+        #ui { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; pointer-events: none; }
+        .btn { 
+            width: 80px; height: 80px; background: rgba(255,0,0,0.6); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; color: white; 
+            font-weight: bold; pointer-events: auto; user-select: none;
         }
-        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
+        #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; pointer-events: auto; }
+        #weapon-select { position: absolute; top: 20px; width: 100%; text-align: center; }
+        .w-btn { padding: 10px; background: white; margin: 5px; pointer-events: auto; }
     </style>
 </head>
 <body>
 
-<div id="start-menu" class="menu">
-    <h1>零戦 3D - 武装選択</h1>
-    <button onclick="initGame('Gun')">20mm機銃 (対空)</button>
-    <button onclick="initGame('Bomb')">250kg爆弾 (対地)</button>
+<div id="weapon-select">
+    <button class="w-btn" onclick="setWeapon('gun')">20mm機銃</button>
+    <button class="w-btn" onclick="setWeapon('bomb')">250kg爆弾</button>
 </div>
 
 <div id="ui">
-    <div id="hp-display">HP: 100</div>
-    <div id="weapon-display">Weapon: ---</div>
-    <p style="font-size: 12px;">画面左半分：旋回 / 右半分：上昇・下降</p>
+    <div id="joystick-zone"></div>
+    <div class="btn" id="fire-btn">FIRE</div>
 </div>
 
 <script type="importmap">
@@ -36,104 +36,158 @@
 <script type="module">
 import * as THREE from 'three';
 
-let scene, camera, renderer, player, weapon;
+let scene, camera, renderer, player;
+let joystick = { x: 0, y: 0, active: false };
+let bullets = [], bombs = [], enemies = [];
+let weaponMode = 'gun';
 let isDead = false;
-const particles = [];
 
-function initGame(selectedWeapon) {
-    document.getElementById('start-menu').style.display = 'none';
-    document.getElementById('weapon-display').innerText = "Weapon: " + selectedWeapon;
-
-    // 1. シーン・カメラ設定
+// 初期化
+function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // 青空
+    scene.background = new THREE.Color(0x87CEEB);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // 2. 光源
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 10, 7).normalize();
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x404040));
+    // 光源
+    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+    sun.position.set(100, 200, 100);
+    scene.add(sun, new THREE.AmbientLight(0x606060));
 
-    // 3. 零戦（簡易モデル：緑の十字）
+    // プレイヤー(零戦)
     player = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 2), new THREE.MeshLambertMaterial({color: 0x2d5d2d}));
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.8), new THREE.MeshLambertMaterial({color: 0x2d5d2d}));
+    const mat = new THREE.MeshLambertMaterial({color: 0x2d5d2d});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 3), mat);
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 1), mat);
     player.add(body, wing);
+    player.position.y = 50;
     scene.add(player);
 
-    // 4. 地面（オープンワールド風）
-    const grid = new THREE.GridHelper(1000, 100, 0x0000ff, 0x808080);
-    grid.position.y = -10;
-    scene.add(grid);
+    // 地面と敵ターゲット
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshLambertMaterial({color: 0x3e5d3e}));
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
 
-    // 操作設定
-    window.addEventListener('touchstart', handleTouch);
+    for(let i=0; i<20; i++) {
+        const enemy = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), new THREE.MeshLambertMaterial({color: 0xff0000}));
+        enemy.position.set(Math.random()*800-400, 10, Math.random()*800-400);
+        scene.add(enemy);
+        enemies.push(enemy);
+    }
 
+    // 操作イベント
+    setupControls();
     animate();
 }
 
-function handleTouch(e) {
-    if (isDead) return;
-    const touchX = e.touches[0].clientX;
-    const touchY = e.touches[0].clientY;
+function setupControls() {
+    const zone = document.getElementById('joystick-zone');
+    zone.addEventListener('touchstart', (e) => { joystick.active = true; });
+    zone.addEventListener('touchmove', (e) => {
+        const rect = zone.getBoundingClientRect();
+        const touch = e.touches[0];
+        joystick.x = ((touch.clientX - rect.left) / rect.width - 0.5) * 2;
+        joystick.y = ((touch.clientY - rect.top) / rect.height - 0.5) * 2;
+    });
+    zone.addEventListener('touchend', () => { joystick.x = 0; joystick.y = 0; joystick.active = false; });
 
-    if (touchX < window.innerWidth / 2) {
-        player.rotation.y += 0.2; // 左旋回
+    document.getElementById('fire-btn').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        fireWeapon();
+    });
+}
+
+window.setWeapon = (mode) => { weaponMode = mode; };
+
+function fireWeapon() {
+    if (isDead) return;
+    if (weaponMode === 'gun') {
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color: 0xffff00}));
+        b.position.copy(player.position);
+        b.quaternion.copy(player.quaternion);
+        b.userData = { life: 100 };
+        scene.add(b);
+        bullets.push(b);
     } else {
-        player.rotation.x -= 0.1; // 上昇
+        const bomb = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshBasicMaterial({color: 0x333333}));
+        bomb.position.copy(player.position);
+        bomb.userData = { velocity: new THREE.Vector3(0, -0.2, 0).applyQuaternion(player.quaternion).add(new THREE.Vector3(0,0,0)), gravity: -0.01 };
+        // 爆弾は前進慣性を少し持たせる
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion).multiplyScalar(1);
+        bomb.userData.velocity = forward;
+        scene.add(bomb);
+        bombs.push(bomb);
     }
 }
 
-function explode() {
-    isDead = true;
-    for (let i = 0; i < 50; i++) {
-        const p = new THREE.Mesh(
-            new THREE.BoxGeometry(0.2, 0.2, 0.2),
-            new THREE.MeshBasicMaterial({color: Math.random() > 0.5 ? 0xff4500 : 0x000000})
-        );
-        p.position.copy(player.position);
-        p.userData = { 
-            velocity: new THREE.Vector3((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5) 
-        };
+function explode(pos, isPlayer = false) {
+    const parts = [];
+    for(let i=0; i<15; i++) {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: 0xff4500}));
+        p.position.copy(pos);
+        p.userData = { v: new THREE.Vector3((Math.random()-0.5)*1, (Math.random()-0.5)*1, (Math.random()-0.5)*1) };
         scene.add(p);
-        particles.push(p);
+        parts.push(p);
     }
-    scene.remove(player);
-    setTimeout(() => { alert("Game Over"); location.reload(); }, 2000);
+    if(isPlayer) {
+        isDead = true;
+        scene.remove(player);
+        setTimeout(() => location.reload(), 2000);
+    }
+    // パーティクル消去処理は簡易化のため省略
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (!isDead) {
-        // 前進
-        player.translateZ(0.2);
-        
-        // カメラが後ろから追従
-        const offset = new THREE.Vector3(0, 2, -10).applyQuaternion(player.quaternion);
-        camera.position.copy(player.position).add(offset);
+        // 旋回ロジック
+        player.rotation.y -= joystick.x * 0.05;
+        player.rotation.x -= joystick.y * 0.03;
+        player.translateZ(1.2); // 前進
+
+        // カメラ追従
+        const camOffset = new THREE.Vector3(0, 5, -15).applyQuaternion(player.quaternion);
+        camera.position.copy(player.position).add(camOffset);
         camera.lookAt(player.position);
 
-        // 地面に激突判定
-        if (player.position.y < -9.5) explode();
+        if (player.position.y < 0) explode(player.position, true);
     }
 
-    // 爆発パーティクルの更新
-    particles.forEach(p => {
-        p.position.add(p.userData.velocity);
-        p.rotation.x += 0.1;
+    // 機銃弾の移動と判定
+    bullets.forEach((b, i) => {
+        b.translateZ(4);
+        b.userData.life--;
+        enemies.forEach(en => {
+            if(b.position.distanceTo(en.position) < 10) {
+                explode(en.position);
+                en.position.y = -100; // 破壊（画面外へ）
+            }
+        });
+        if(b.userData.life < 0) { scene.remove(b); bullets.splice(i, 1); }
+    });
+
+    // 爆弾の移動
+    bombs.forEach((b, i) => {
+        b.userData.velocity.y -= 0.02; // 重力
+        b.position.add(b.userData.velocity);
+        if(b.position.y < 0) {
+            explode(b.position);
+            enemies.forEach(en => {
+                if(b.position.distanceTo(en.position) < 30) en.position.y = -100;
+            });
+            scene.remove(b);
+            bombs.splice(i, 1);
+        }
     });
 
     renderer.render(scene, camera);
 }
 
-// グローバルに関数を公開
-window.initGame = initGame;
+init();
 </script>
 </body>
 </html>
