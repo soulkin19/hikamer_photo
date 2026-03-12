@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Zero Fighter Sandbox</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .menu { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 20px; text-align: center;
+            pointer-events: auto; border-radius: 10px;
+        }
+        button { padding: 10px 20px; font-size: 18px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div id="start-menu" class="menu">
+        <h2>零戦：武装選択</h2>
+        <button onclick="startGame('machinegun')">20mm機銃増量 (対空性能UP)</button>
+        <button onclick="startGame('bomb')">250kg爆弾装備 (地上破壊用)</button>
+    </div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let gameActive = false;
+let weaponType = '';
+
+// 画面サイズ設定
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// プレイヤー（零戦）のオブジェクト
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    angle: 0,
+    speed: 2,
+    hp: 100,
+    particles: []
+};
+
+// ゲーム開始関数
+function startGame(type) {
+    weaponType = type;
+    gameActive = true;
+    document.getElementById('start-menu').style.display = 'none';
+    animate();
+}
+
+// 爆発エフェクトの生成
+function explode(x, y) {
+    for (let i = 0; i < 20; i++) {
+        player.particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 30
+        });
+    }
+}
+
+// モバイル操作（タップした方向に旋回）
+window.addEventListener('touchstart', (e) => {
+    if(!gameActive) return;
+    const touchX = e.touches[0].clientX;
+    if (touchX < canvas.width / 2) {
+        player.angle -= 0.1; // 左旋回
+    } else {
+        player.angle += 0.1; // 右旋回
+    }
+});
+
+function update() {
+    if (!gameActive) return;
+
+    // 前進移動
+    player.x += Math.cos(player.angle) * player.speed;
+    player.y += Math.sin(player.angle) * player.speed;
+
+    // 画面外に出たらダメージ（爆発テスト用）
+    if (player.x < 0 || player.x > canvas.width || player.y < 0 || player.y > canvas.height) {
+        player.hp = 0;
+    }
+
+    if (player.hp <= 0) {
+        explode(player.x, player.y);
+        gameActive = false;
+        setTimeout(() => alert("撃墜されました。再起動します。"), 500);
+        location.reload();
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 機体の描画（簡易的な三角形）
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle);
+    ctx.fillStyle = "darkgreen";
+    ctx.beginPath();
+    ctx.moveTo(15, 0);
+    ctx.lineTo(-10, -10);
+    ctx.lineTo(-10, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 爆発パーティクルの描画
+    player.particles.forEach((p, index) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        ctx.fillStyle = `rgba(255, ${p.life * 5}, 0, ${p.life / 30})`;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        if (p.life <= 0) player.particles.splice(index, 1);
+    });
+}
+
+function animate() {
+    update();
+    draw();
+    if(gameActive || player.particles.length > 0) requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>
