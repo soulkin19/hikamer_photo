@@ -1,221 +1,265 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zero Ace: WTM Fix</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; touch-action: none; font-family: 'Courier New', monospace; }
-        #ui-layer { position: absolute; inset: 0; pointer-events: none; color: #00ff00; }
-        .hud-stats { position: absolute; top: 40px; left: 20px; font-size: 18px; font-weight: bold; }
-        .reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 2px solid rgba(0,255,0,0.5); border-radius: 50%; }
-        #joystick-zone { position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px; border: 2px solid rgba(0,255,0,0.3); border-radius: 50%; pointer-events: auto; }
-        #fire-btn { 
-            position: absolute; bottom: 40px; right: 40px; width: 100px; height: 100px; 
-            background: rgba(255,0,0,0.2); border: 3px solid #ff0000; border-radius: 50%; 
-            color: #ff0000; font-weight: bold; display: flex; align-items: center; justify-content: center; 
-            pointer-events: auto; font-size: 20px;
-        }
-        #weapon-select { position: absolute; top: 20px; right: 20px; pointer-events: auto; }
-        .w-btn { padding: 10px; background: rgba(0,255,0,0.2); color: #0f0; border: 1px solid #0f0; margin-bottom: 5px; display: block; width: 100px; }
-        .active-w { background: rgba(0,255,0,0.5); color: #fff; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ミニスロットカー（タッチ対応版）</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: #111;
+      font-family: Arial, sans-serif;
+      color: white;
+      touch-action: none;          /* ピンチズーム・スクロール防止 */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #game {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 80vh;
+      max-height: 700px;
+      background: #333;
+      border: 3px solid #666;
+      overflow: hidden;
+      touch-action: none;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9);
+    }
+    #road {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        #222 0px, #222 50px,
+        #444 50px, #444 100px
+      );
+      transition: transform 0.1s linear;
+    }
+    .car {
+      position: absolute;
+      width: 50px;
+      height: 28px;
+      border-radius: 6px;
+      transition: left 0.08s linear, transform 0.1s;
+      box-shadow: 0 3px 10px black;
+    }
+    #player {
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(to right, #ff5555, #cc0000);
+    }
+    #cpu {
+      bottom: 60px;
+      left: 30%;
+      background: linear-gradient(to right, #5555ff, #0000cc);
+    }
+    #goal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 80px;
+      background: linear-gradient(to bottom, #ffdd44, #ffaa00);
+      text-align: center;
+      line-height: 80px;
+      font-size: 3rem;
+      font-weight: bold;
+      color: #000;
+      display: none;
+      z-index: 10;
+    }
+    #info {
+      font-size: 1.6rem;
+      margin: 10px;
+      text-shadow: 0 0 10px black;
+    }
+    button {
+      padding: 15px 40px;
+      font-size: 1.4rem;
+      margin: 15px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: #444;
+      color: white;
+    }
+    button:active {
+      background: #666;
+    }
+    /* タッチエリアの視覚的ヒント（オプション） */
+    .touch-zone {
+      position: absolute;
+      bottom: 0;
+      height: 35%;
+      width: 50%;
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 5;
+    }
+    #left-zone  { left: 0;  background: linear-gradient(to right, #00ff88, transparent); }
+    #right-zone { right: 0; background: linear-gradient(to left, #ff8800, transparent); }
+  </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div class="hud-stats">SPD: <span id="spd-val">0</span><br>ALT: <span id="alt-val">0</span></div>
-    <div class="reticle"></div>
-    <div id="weapon-select">
-        <button id="btn-gun" class="w-btn active-w" onclick="setWeapon('gun')">20mm</button>
-        <button id="btn-bomb" class="w-btn" onclick="setWeapon('bomb')">BOMB</button>
+  <div id="container">
+    <div id="info">残り距離: <span id="distance">3000</span>m</div>
+    <div id="game">
+      <div id="road"></div>
+      <div id="player" class="car"></div>
+      <div id="cpu" class="car"></div>
+      <div id="goal">GOAL!!</div>
+      <!-- タッチエリアの視覚ガイド（薄く表示） -->
+      <div id="left-zone"  class="touch-zone"></div>
+      <div id="right-zone" class="touch-zone"></div>
     </div>
-    <div id="joystick-zone"></div>
-    <div id="fire-btn">FIRE</div>
-</div>
+    <button onclick="startGame()">スタート / リスタート</button>
+  </div>
 
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
+  <script>
+    const game = document.getElementById('game');
+    const player = document.getElementById('player');
+    const cpu    = document.getElementById('cpu');
+    const distEl = document.getElementById('distance');
+    const goal   = document.getElementById('goal');
 
-<script type="module">
-import * as THREE from 'three';
+    let gameRunning = false;
+    let playerX = 0;           // 相対位置（%ベースに変更）
+    let playerSpeed = 0;
+    let cpuSpeed = 2.8;
+    let distanceLeft = 3000;
+    let animationFrameId;
 
-let scene, camera, renderer, player, propeller, planeGroup;
-let joystick = { x: 0, y: 0, active: false };
-let look = { yaw: 0, pitch: 0, active: false };
-let projectiles = [], enemies = [], particles = [];
-let weaponMode = 'gun';
-let isDead = false;
-let mapType = Math.random() > 0.5 ? 'sea' : 'station';
+    const curves = [
+      { start:  600, power: 1.2 },
+      { start: 1200, power: 1.8 },
+      { start: 1800, power: 1.4 },
+      { start: 2400, power: 2.2 },
+    ];
 
-function init() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    // タッチ制御用
+    let accelerating = false;
+    let decelerating = false;
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(500, 1000, 500);
-    scene.add(sun, new THREE.AmbientLight(0x888888));
-
-    setupMap();
-    createPlayer();
-    setupControls();
-    animate();
-}
-
-function setupMap() {
-    if (mapType === 'sea') {
-        scene.background = new THREE.Color(0x4488ff);
-        const water = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshLambertMaterial({color: 0x0044ff}));
-        water.rotation.x = -Math.PI / 2;
-        scene.add(water);
-        for(let i=0; i<15; i++) createEnemy(Math.random()*2000-1000, 10, Math.random()*2000-1000, 40, 20, 80);
-    } else {
-        scene.background = new THREE.Color(0x050510);
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshLambertMaterial({color: 0x111111}));
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-        for(let i=0; i<40; i++) createEnemy(Math.random()*1500-750, 50, Math.random()*1500-750, 30, 100, 30);
-    }
-}
-
-function createEnemy(x, y, z, w, h, d) {
-    const en = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color: 0x777777}));
-    en.position.set(x, h/2, z);
-    // 当たり判定用のサイズを保持
-    en.userData = { size: new THREE.Vector3(w, h, d) };
-    scene.add(en);
-    enemies.push(en);
-}
-
-function createPlayer() {
-    planeGroup = new THREE.Group();
-    player = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({color: 0x243b24});
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4), mat);
-    body.rotation.x = Math.PI / 2;
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 1.5), mat);
-    propeller = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3, 0.1), new THREE.MeshBasicMaterial({color: 0x000000}));
-    propeller.position.z = 2.1;
-    player.add(body, wing, propeller);
-    planeGroup.add(player);
-    planeGroup.position.y = 100;
-    scene.add(planeGroup);
-}
-
-function setupControls() {
-    const zone = document.getElementById('joystick-zone');
-    zone.addEventListener('touchstart', () => joystick.active = true);
-    zone.addEventListener('touchmove', (e) => {
-        const r = zone.getBoundingClientRect();
-        const t = e.touches[0];
-        joystick.x = (t.clientX - (r.left + 60)) / 60;
-        joystick.y = (t.clientY - (r.top + 60)) / 60;
-    });
-    zone.addEventListener('touchend', () => { joystick.active = false; joystick.x = 0; joystick.y = 0; });
-    document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
-}
-
-window.setWeapon = (m) => {
-    weaponMode = m;
-    document.getElementById('btn-gun').classList.toggle('active-w', m==='gun');
-    document.getElementById('btn-bomb').classList.toggle('active-w', m==='bomb');
-};
-
-function fire() {
-    if(isDead) return;
-    const p = new THREE.Mesh(
-        new THREE.SphereGeometry(weaponMode === 'gun' ? 0.3 : 0.8), 
-        new THREE.MeshBasicMaterial({color: weaponMode==='gun'?0xffff00:0x333333})
-    );
-    p.position.copy(planeGroup.position);
-    p.quaternion.copy(planeGroup.quaternion);
-    const vel = new THREE.Vector3(0, 0, weaponMode === 'gun' ? 8 : 2).applyQuaternion(planeGroup.quaternion);
-    p.userData = { type: weaponMode, vel: vel, life: 200 };
-    scene.add(p);
-    projectiles.push(p);
-}
-
-function explode(pos, scale=1, isPlayer=false) {
-    for(let i=0; i<30 * scale; i++) {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(1*scale, 1*scale, 1*scale), new THREE.MeshBasicMaterial({color: Math.random()>0.3?0xffaa00:0x333333}));
-        m.position.copy(pos);
-        m.userData = { v: new THREE.Vector3((Math.random()-0.5)*4*scale, (Math.random()-0.5)*4*scale, (Math.random()-0.5)*4*scale), life: 40 };
-        scene.add(m);
-        particles.push(m);
-    }
-    if(isPlayer) {
-        isDead = true;
-        scene.remove(planeGroup);
-        setTimeout(() => location.reload(), 2000);
-    }
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    if(!isDead) {
-        // 操作：上にあげたら上、下にさげたら下 (joystick.yを反転させて適用)
-        planeGroup.rotation.y -= joystick.x * 0.04;
-        planeGroup.rotation.x += joystick.y * 0.03; // ここを + に変更
-        player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -joystick.x * 0.8, 0.1);
-        planeGroup.translateZ(2.2);
-        propeller.rotation.y += 0.8;
-
-        const camOffset = new THREE.Vector3(0, 4, -15).applyQuaternion(planeGroup.quaternion);
-        camera.position.lerp(planeGroup.position.clone().add(camOffset), 0.1);
-        camera.lookAt(planeGroup.position);
-
-        // HUD
-        document.getElementById('spd-val').innerText = "320";
-        document.getElementById('alt-val').innerText = Math.floor(planeGroup.position.y);
-
-        // 障害物・敵との衝突判定
-        enemies.forEach(en => {
-            if(planeGroup.position.distanceTo(en.position) < 25) explode(planeGroup.position, 2, true);
-        });
-        if(planeGroup.position.y < 0) explode(planeGroup.position, 2, true);
+    function getGameWidth() {
+      return game.clientWidth;
     }
 
-    // 弾丸と爆弾
-    projectiles.forEach((p, i) => {
-        if(p.userData.type === 'bomb') p.userData.vel.y -= 0.08;
-        p.position.add(p.userData.vel);
-        p.userData.life--;
+    function update() {
+      if (!gameRunning) return;
 
-        // 爆弾の破壊ロジック
-        if(p.position.y <= 0 || p.userData.life <= 0) {
-            explode(p.position, p.userData.type === 'bomb' ? 3 : 1);
-            if(p.userData.type === 'bomb') {
-                enemies.forEach(en => {
-                    // 爆発半径(60)以内なら破壊
-                    if(p.position.distanceTo(en.position) < 60) en.position.y = -2000;
-                });
-            }
-            scene.remove(p); projectiles.splice(i, 1);
-        } else {
-            // 直撃判定
-            enemies.forEach(en => {
-                if(p.position.distanceTo(en.position) < 15) {
-                    explode(en.position, 2);
-                    en.position.y = -2000;
-                    scene.remove(p); projectiles.splice(i, 1);
-                }
-            });
+      // タッチ/キー操作
+      if (accelerating || keys.ArrowRight || keys.d) {
+        playerSpeed += 0.22;
+      }
+      if (decelerating || keys.ArrowLeft || keys.a) {
+        playerSpeed -= 0.22;
+      }
+
+      playerSpeed *= 0.955; // 摩擦
+      playerSpeed = Math.max(-5, Math.min(7, playerSpeed));
+
+      playerX += playerSpeed * 0.4; // 左右移動幅を調整
+
+      const maxX = getGameWidth() - player.offsetWidth;
+      if (playerX < 30 || playerX > maxX - 30) {
+        playerSpeed *= 0.38; // 壁で大減速
+      }
+      playerX = Math.max(30, Math.min(maxX - 30, playerX));
+
+      player.style.left = playerX + 'px';
+
+      // CPUの簡易AI
+      let cpuAccel = 0.14;
+      const nearCurve = curves.some(c => Math.abs(distanceLeft - c.start) < 350);
+      if (nearCurve) cpuAccel *= 0.65;
+
+      cpuSpeed += (Math.random() * 0.05 - 0.025) + cpuAccel * 0.7;
+      cpuSpeed = Math.max(1.5, Math.min(4.5, cpuSpeed));
+
+      distanceLeft -= (playerSpeed + cpuSpeed) * 0.9;
+      distEl.textContent = Math.max(0, Math.floor(distanceLeft));
+
+      // カーブ演出
+      let curveOffset = 0;
+      for (let c of curves) {
+        if (distanceLeft < c.start + 250 && distanceLeft > c.start - 450) {
+          const t = (distanceLeft - (c.start - 450)) / 700;
+          curveOffset = Math.sin(t * Math.PI * 2) * 35 * c.power;
         }
+      }
+      document.getElementById('road').style.transform = `translateX(${curveOffset}px)`;
+
+      // ゴール
+      if (distanceLeft <= 0) {
+        gameRunning = false;
+        goal.style.display = 'block';
+        goal.textContent = playerSpeed > cpuSpeed ? "YOU WIN!!" : "CPU WIN...";
+        goal.style.color = playerSpeed > cpuSpeed ? "#0f0" : "#f44";
+      }
+
+      animationFrameId = requestAnimationFrame(update);
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', e => { if (['ArrowLeft','ArrowRight','a','d'].includes(e.key)) e.preventDefault(); keys[e.key] = true; });
+    window.addEventListener('keyup',   e => keys[e.key] = false);
+
+    // タッチイベント（画面左半分＝減速、右半分＝加速）
+    function handleTouch(e) {
+      e.preventDefault();
+      accelerating = false;
+      decelerating = false;
+
+      for (let touch of e.touches) {
+        const rect = game.getBoundingClientRect();
+        const tx = touch.clientX - rect.left;
+        if (tx < rect.width / 2) {
+          decelerating = true;
+        } else {
+          accelerating = true;
+        }
+      }
+    }
+
+    game.addEventListener('touchstart', handleTouch, { passive: false });
+    game.addEventListener('touchmove',  handleTouch, { passive: false });
+    game.addEventListener('touchend',   e => { e.preventDefault(); accelerating = false; decelerating = false; });
+    game.addEventListener('touchcancel', e => { e.preventDefault(); accelerating = false; decelerating = false; });
+
+    function startGame() {
+      cancelAnimationFrame(animationFrameId);
+      gameRunning = true;
+      playerX = (getGameWidth() - player.offsetWidth) / 2;
+      player.style.left = playerX + 'px';
+      playerSpeed = 0;
+      cpuSpeed = 2.8;
+      distanceLeft = 3000;
+      cpu.style.left = (getGameWidth() * 0.3) + 'px';
+      goal.style.display = 'none';
+      update();
+    }
+
+    // 画面サイズが変わったら再調整
+    window.addEventListener('resize', () => {
+      if (gameRunning) playerX = Math.min(playerX, getGameWidth() - player.offsetWidth);
     });
 
-    particles.forEach((p, i) => {
-        p.position.add(p.userData.v);
-        p.userData.life--;
-        p.material.opacity = p.userData.life / 40;
-        if(p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
-    });
-    renderer.render(scene, camera);
-}
-init();
-</script>
+    // 初回はボタン待ち
+  </script>
 </body>
 </html>
