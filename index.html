@@ -3,30 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zero Fighter Pro 3D</title>
+    <title>Zero Fighter Ace 3D</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: sans-serif; }
-        #ui { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; pointer-events: none; }
-        .btn { 
+        #ui { position: absolute; bottom: 0; width: 100%; height: 100%; pointer-events: none; }
+        /* 左手ジョイスティック */
+        #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; pointer-events: auto; }
+        #joystick-handle { position: absolute; top: 50px; left: 50px; width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 50%; display: none; }
+        /* 右手視点操作エリア */
+        #look-zone { position: absolute; top: 0; right: 0; width: 50%; height: 100%; pointer-events: auto; }
+        /* 武装選択と発射ボタン */
+        #weapon-select { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none;}
+        .w-btn { padding: 10px; background: white; margin: 5px; pointer-events: auto; }
+        #fire-btn-container { position: absolute; bottom: 20px; right: 20px; pointer-events: none; }
+        #fire-btn { 
             width: 80px; height: 80px; background: rgba(255,0,0,0.6); border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; color: white; 
             font-weight: bold; pointer-events: auto; user-select: none;
         }
-        #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; pointer-events: auto; }
-        #weapon-select { position: absolute; top: 20px; width: 100%; text-align: center; }
-        .w-btn { padding: 10px; background: white; margin: 5px; pointer-events: auto; }
     </style>
 </head>
 <body>
 
-<div id="weapon-select">
-    <button class="w-btn" onclick="setWeapon('gun')">20mm機銃</button>
-    <button class="w-btn" onclick="setWeapon('bomb')">250kg爆弾</button>
-</div>
-
 <div id="ui">
-    <div id="joystick-zone"></div>
-    <div class="btn" id="fire-btn">FIRE</div>
+    <div id="joystick-zone">
+        <div id="joystick-handle"></div>
+    </div>
+    <div id="look-zone"></div>
+    <div id="weapon-select">
+        <button class="w-btn" onclick="setWeapon('gun')">20mm機銃</button>
+        <button class="w-btn" onclick="setWeapon('bomb')">250kg爆弾</button>
+    </div>
+    <div id="fire-btn-container">
+        <div class="btn" id="fire-btn">FIRE</div>
+    </div>
 </div>
 
 <script type="importmap">
@@ -37,12 +47,14 @@
 import * as THREE from 'three';
 
 let scene, camera, renderer, player;
+// 操作関連
 let joystick = { x: 0, y: 0, active: false };
-let bullets = [], bombs = [], enemies = [];
+const lookState = { yaw: 0, pitch: 0, radius: 15, prevX: 0, prevY: 0, active: false };
+// ゲームオブジェクト
+let bullets = [], bombs = [], enemies = [], explosionParticles = [];
 let weaponMode = 'gun';
 let isDead = false;
 
-// 初期化
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87CEEB);
@@ -57,7 +69,7 @@ function init() {
     sun.position.set(100, 200, 100);
     scene.add(sun, new THREE.AmbientLight(0x606060));
 
-    // プレイヤー(零戦)
+    // 自機（零戦：簡易モデル）
     player = new THREE.Group();
     const mat = new THREE.MeshLambertMaterial({color: 0x2d5d2d});
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 3), mat);
@@ -71,35 +83,80 @@ function init() {
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
 
-    for(let i=0; i<20; i++) {
+    for(let i=0; i<15; i++) {
         const enemy = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), new THREE.MeshLambertMaterial({color: 0xff0000}));
         enemy.position.set(Math.random()*800-400, 10, Math.random()*800-400);
         scene.add(enemy);
         enemies.push(enemy);
     }
 
-    // 操作イベント
+    // 操作設定
     setupControls();
     animate();
 }
 
 function setupControls() {
+    // 左手ジョイスティック
     const zone = document.getElementById('joystick-zone');
-    zone.addEventListener('touchstart', (e) => { joystick.active = true; });
+    const handle = document.getElementById('joystick-handle');
+    zone.addEventListener('touchstart', (e) => { 
+        joystick.active = true; 
+        handle.style.display = 'block';
+    });
     zone.addEventListener('touchmove', (e) => {
+        if (!joystick.active) return;
         const rect = zone.getBoundingClientRect();
         const touch = e.touches[0];
-        joystick.x = ((touch.clientX - rect.left) / rect.width - 0.5) * 2;
-        joystick.y = ((touch.clientY - rect.top) / rect.height - 0.5) * 2;
+        const halfWidth = rect.width / 2;
+        const dx = (touch.clientX - (rect.left + halfWidth));
+        const dy = (touch.clientY - (rect.top + halfWidth));
+        
+        // ジョイスティックの値を正規化
+        joystick.x = Math.max(-1, Math.min(1, dx / halfWidth));
+        joystick.y = Math.max(-1, Math.min(1, dy / halfWidth));
+        
+        // ハンドルの位置を更新
+        handle.style.left = (rect.width/2 + joystick.x * rect.width/2 - 25) + 'px';
+        handle.style.top = (rect.height/2 + joystick.y * rect.width/2 - 25) + 'px';
     });
-    zone.addEventListener('touchend', () => { joystick.x = 0; joystick.y = 0; joystick.active = false; });
+    zone.addEventListener('touchend', () => { 
+        joystick.x = 0; joystick.y = 0; joystick.active = false; 
+        handle.style.display = 'none';
+    });
 
+    // 右手視点操作
+    const lookZone = document.getElementById('look-zone');
+    lookZone.addEventListener('touchstart', (e) => { 
+        lookState.active = true;
+        const touch = e.touches[0];
+        lookState.prevX = touch.clientX;
+        lookState.prevY = touch.clientY;
+    });
+    lookZone.addEventListener('touchmove', (e) => {
+        if (!lookState.active) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lookState.prevX;
+        const deltaY = touch.clientY - lookState.prevY;
+        
+        // 視点を更新
+        lookState.yaw -= deltaX * 0.005; // 横の回転
+        lookState.pitch -= deltaY * 0.005; // 縦の回転
+        // 縦の回転を制限（真上・真下を向かないように）
+        lookState.pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, lookState.pitch));
+        
+        lookState.prevX = touch.clientX;
+        lookState.prevY = touch.clientY;
+    });
+    lookZone.addEventListener('touchend', () => { lookState.active = false; });
+
+    // 武装発射ボタン
     document.getElementById('fire-btn').addEventListener('touchstart', (e) => {
         e.preventDefault();
         fireWeapon();
     });
 }
 
+// 武装設定関数（グローバルに公開）
 window.setWeapon = (mode) => { weaponMode = mode; };
 
 function fireWeapon() {
@@ -114,47 +171,76 @@ function fireWeapon() {
     } else {
         const bomb = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshBasicMaterial({color: 0x333333}));
         bomb.position.copy(player.position);
-        bomb.userData = { velocity: new THREE.Vector3(0, -0.2, 0).applyQuaternion(player.quaternion).add(new THREE.Vector3(0,0,0)), gravity: -0.01 };
-        // 爆弾は前進慣性を少し持たせる
         const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion).multiplyScalar(1);
-        bomb.userData.velocity = forward;
+        bomb.userData = { velocity: forward };
         scene.add(bomb);
         bombs.push(bomb);
     }
 }
 
+// 爆発演出関数
 function explode(pos, isPlayer = false) {
-    const parts = [];
-    for(let i=0; i<15; i++) {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: 0xff4500}));
+    const numParticles = 40;
+    for(let i=0; i<numParticles; i++) {
+        // 様々な破片を作成（色や形を変える）
+        const isFire = Math.random() > 0.4;
+        const mat = new THREE.MeshBasicMaterial({
+            color: isFire ? 0xff4500 : 0x000000, 
+            transparent: true, 
+            opacity: 1
+        });
+        const p = new THREE.Mesh(
+            isFire ? new THREE.SphereGeometry(0.5) : new THREE.BoxGeometry(1, 1, 1), 
+            mat
+        );
         p.position.copy(pos);
-        p.userData = { v: new THREE.Vector3((Math.random()-0.5)*1, (Math.random()-0.5)*1, (Math.random()-0.5)*1) };
+        // ランダムな高速ベクトルを付与
+        const speedMultiplier = isFire ? 2 : 1.5;
+        p.userData = { 
+            v: new THREE.Vector3((Math.random()-0.5)*speedMultiplier, (Math.random()-0.5)*speedMultiplier, (Math.random()-0.5)*speedMultiplier),
+            life: Math.random() * 50 + 50, // パーティクルの寿命
+            isFire: isFire
+        };
         scene.add(p);
-        parts.push(p);
+        explosionParticles.push(p);
     }
+    
+    // 自機の場合、ゲームオーバーへ
     if(isPlayer) {
         isDead = true;
         scene.remove(player);
-        setTimeout(() => location.reload(), 2000);
+        setTimeout(() => { alert("撃墜されました。再起動します。"); location.reload(); }, 3000);
     }
-    // パーティクル消去処理は簡易化のため省略
+}
+
+function updateCamera() {
+    // 自機の背後（lookState.yaw/pitchに基づく位置）にカメラを配置
+    const offsetX = lookState.radius * Math.sin(lookState.yaw) * Math.cos(lookState.pitch);
+    const offsetY = lookState.radius * Math.sin(lookState.pitch);
+    const offsetZ = lookState.radius * Math.cos(lookState.yaw) * Math.cos(lookState.pitch);
+    
+    const camPos = player.position.clone().add(new THREE.Vector3(offsetX, offsetY, -offsetZ));
+    camera.position.copy(camPos);
+    camera.lookAt(player.position);
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (!isDead) {
-        // 旋回ロジック
-        player.rotation.y -= joystick.x * 0.05;
-        player.rotation.x -= joystick.y * 0.03;
-        player.translateZ(1.2); // 前進
+        // 自機の操作ロジック（左手ジョイスティック）
+        player.rotation.y -= joystick.x * 0.05; // 左右：旋回
+        player.rotation.x -= joystick.y * 0.03; // 上下：機首（逆操作）
+        player.translateZ(1.2); // 前進（常時）
 
-        // カメラ追従
-        const camOffset = new THREE.Vector3(0, 5, -15).applyQuaternion(player.quaternion);
-        camera.position.copy(player.position).add(camOffset);
-        camera.lookAt(player.position);
+        // 視点更新
+        updateCamera();
 
+        // 地面に激突判定
         if (player.position.y < 0) explode(player.position, true);
+    } else {
+        // 撃墜後もカメラを動かし、爆発を映し続ける
+        updateCamera();
     }
 
     // 機銃弾の移動と判定
@@ -163,14 +249,14 @@ function animate() {
         b.userData.life--;
         enemies.forEach(en => {
             if(b.position.distanceTo(en.position) < 10) {
-                explode(en.position);
+                explode(en.position); // 敵撃破も爆発させる
                 en.position.y = -100; // 破壊（画面外へ）
             }
         });
         if(b.userData.life < 0) { scene.remove(b); bullets.splice(i, 1); }
     });
 
-    // 爆弾の移動
+    // 爆弾の移動と判定
     bombs.forEach((b, i) => {
         b.userData.velocity.y -= 0.02; // 重力
         b.position.add(b.userData.velocity);
@@ -181,6 +267,18 @@ function animate() {
             });
             scene.remove(b);
             bombs.splice(i, 1);
+        }
+    });
+
+    // 爆発パーティクルの更新とフェードアウト
+    explosionParticles.forEach((p, i) => {
+        p.position.add(p.userData.v);
+        p.userData.life--;
+        p.material.opacity = Math.max(0, p.userData.life / 100); // 寿命とともに消える
+        p.rotation.x += 0.1;
+        if(p.userData.life <= 0) {
+            scene.remove(p);
+            explosionParticles.splice(i, 1);
         }
     });
 
