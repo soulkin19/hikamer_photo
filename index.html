@@ -2,264 +2,211 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ミニスロットカー（タッチ対応版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>スロットカー対決！ あなた vs BOT</title>
   <style>
     body {
+      font-family: system-ui, sans-serif;
+      background: #0d1b2a;
+      color: #e0e0e0;
       margin: 0;
-      padding: 0;
-      height: 100vh;
-      overflow: hidden;
-      background: #111;
-      font-family: Arial, sans-serif;
-      color: white;
-      touch-action: none;          /* ピンチズーム・スクロール防止 */
-      -webkit-user-select: none;
-      user-select: none;
+      padding: 20px;
+      text-align: center;
     }
-    #container {
+    h1 {
+      color: #ffd60a;
+      margin-bottom: 10px;
+    }
+    #track {
+      width: 90%;
+      max-width: 800px;
+      height: 160px;
+      margin: 30px auto;
+      background: linear-gradient(to right, #333, #555);
+      border: 4px solid #444;
+      border-radius: 12px;
       position: relative;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    #game {
-      position: relative;
-      width: 100%;
-      max-width: 500px;
-      height: 80vh;
-      max-height: 700px;
-      background: #333;
-      border: 3px solid #666;
       overflow: hidden;
-      touch-action: none;
-      box-shadow: 0 0 30px rgba(0,0,0,0.9);
-    }
-    #road {
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(
-        to bottom,
-        #222 0px, #222 50px,
-        #444 50px, #444 100px
-      );
-      transition: transform 0.1s linear;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
     }
     .car {
+      width: 70px;
+      height: 40px;
       position: absolute;
-      width: 50px;
-      height: 28px;
-      border-radius: 6px;
-      transition: left 0.08s linear, transform 0.1s;
-      box-shadow: 0 3px 10px black;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 38px;
+      transition: left 0.08s linear;
+      text-shadow: 0 0 8px currentColor;
     }
-    #player {
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(to right, #ff5555, #cc0000);
-    }
-    #cpu {
-      bottom: 60px;
-      left: 30%;
-      background: linear-gradient(to right, #5555ff, #0000cc);
-    }
-    #goal {
+    #player-car   { left: 0; color: #ff4d6d; }
+    #bot-car      { left: 0; color: #00d4ff; top: 20%; }
+
+    #finish {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 80px;
-      background: linear-gradient(to bottom, #ffdd44, #ffaa00);
-      text-align: center;
-      line-height: 80px;
-      font-size: 3rem;
-      font-weight: bold;
-      color: #000;
-      display: none;
-      z-index: 10;
-    }
-    #info {
-      font-size: 1.6rem;
-      margin: 10px;
-      text-shadow: 0 0 10px black;
-    }
-    button {
-      padding: 15px 40px;
-      font-size: 1.4rem;
-      margin: 15px;
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      background: #444;
-      color: white;
-    }
-    button:active {
-      background: #666;
-    }
-    /* タッチエリアの視覚的ヒント（オプション） */
-    .touch-zone {
-      position: absolute;
-      bottom: 0;
-      height: 35%;
-      width: 50%;
-      opacity: 0.15;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 60px;
+      color: #ffd60a;
+      text-shadow: 0 0 15px #ffd60a;
       pointer-events: none;
-      z-index: 5;
     }
-    #left-zone  { left: 0;  background: linear-gradient(to right, #00ff88, transparent); }
-    #right-zone { right: 0; background: linear-gradient(to left, #ff8800, transparent); }
+
+    #info {
+      font-size: 1.3rem;
+      margin: 20px 0;
+      min-height: 1.8em;
+    }
+
+    button {
+      font-size: 1.4rem;
+      padding: 14px 32px;
+      margin: 10px;
+      border: none;
+      border-radius: 12px;
+      background: #ff4d6d;
+      color: white;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button:hover { background: #ff758c; transform: scale(1.05); }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #startBtn { background: #00d4ff; }
+    #startBtn:hover { background: #40e0ff; }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-  <div id="container">
-    <div id="info">残り距離: <span id="distance">3000</span>m</div>
-    <div id="game">
-      <div id="road"></div>
-      <div id="player" class="car"></div>
-      <div id="cpu" class="car"></div>
-      <div id="goal">GOAL!!</div>
-      <!-- タッチエリアの視覚ガイド（薄く表示） -->
-      <div id="left-zone"  class="touch-zone"></div>
-      <div id="right-zone" class="touch-zone"></div>
-    </div>
-    <button onclick="startGame()">スタート / リスタート</button>
-  </div>
+<h1>スロットカー対決！ あなた vs BOT</h1>
 
-  <script>
-    const game = document.getElementById('game');
-    const player = document.getElementById('player');
-    const cpu    = document.getElementById('cpu');
-    const distEl = document.getElementById('distance');
-    const goal   = document.getElementById('goal');
+<div id="track">
+  <div id="finish">🏁</div>
+  <div id="player-car" class="car">🚗</div>
+  <div id="bot-car" class="car">🤖</div>
+</div>
 
-    let gameRunning = false;
-    let playerX = 0;           // 相対位置（%ベースに変更）
-    let playerSpeed = 0;
-    let cpuSpeed = 2.8;
-    let distanceLeft = 3000;
-    let animationFrameId;
+<div id="info">準備OK！　スタートボタンを押してね</div>
 
-    const curves = [
-      { start:  600, power: 1.2 },
-      { start: 1200, power: 1.8 },
-      { start: 1800, power: 1.4 },
-      { start: 2400, power: 2.2 },
-    ];
+<button id="startBtn">スタート！</button>
+<button id="accelBtn" disabled>加速！</button>
+<button id="resetBtn" class="hidden">もう一回</button>
 
-    // タッチ制御用
-    let accelerating = false;
-    let decelerating = false;
+<script>
+const playerCar = document.getElementById('player-car');
+const botCar    = document.getElementById('bot-car');
+const info      = document.getElementById('info');
+const startBtn  = document.getElementById('startBtn');
+const accelBtn  = document.getElementById('accelBtn');
+const resetBtn  = document.getElementById('resetBtn');
 
-    function getGameWidth() {
-      return game.clientWidth;
+const TRACK_WIDTH = document.getElementById('track').clientWidth - 80; // 車の幅を引く
+const FINISH_LINE = TRACK_WIDTH;
+
+let playerPos = 0;
+let botPos    = 0;
+let gameRunning = false;
+let playerSpeed = 0;
+let botSpeed    = 0;
+let lastTime    = 0;
+
+function resetGame() {
+  playerPos = 0;
+  botPos    = 0;
+  playerSpeed = 0;
+  botSpeed    = 0;
+  playerCar.style.left = '0px';
+  botCar.style.left    = '0px';
+  info.textContent = "準備OK！　スタートボタンを押してね";
+  startBtn.disabled = false;
+  accelBtn.disabled = true;
+  resetBtn.classList.add('hidden');
+  gameRunning = false;
+}
+
+function updatePositions(timestamp) {
+  if (!gameRunning) return;
+
+  if (!lastTime) lastTime = timestamp;
+  const dt = (timestamp - lastTime) / 1000; // 秒
+  lastTime = timestamp;
+
+  // プレイヤーの速度変化（摩擦あり）
+  playerSpeed *= 0.96;           // 自然減速
+  playerPos += playerSpeed * dt * 1800;
+
+  // Botはちょっと賢い（たまにミスする）
+  if (Math.random() < 0.97) {
+    botSpeed += (Math.random() * 0.8 + 0.9); // 0.9〜1.7くらいの加速
+  } else {
+    botSpeed *= 0.4; // たまに大きく減速（ミス）
+  }
+  botSpeed = Math.min(botSpeed, 28); // 上限
+  botPos += botSpeed * dt * 1400;
+
+  // 位置制限
+  playerPos = Math.min(playerPos, FINISH_LINE + 30);
+  botPos    = Math.min(botPos,    FINISH_LINE + 30);
+
+  playerCar.style.left = playerPos + 'px';
+  botCar.style.left    = botPos + 'px';
+
+  // 勝敗判定
+  if (playerPos >= FINISH_LINE || botPos >= FINISH_LINE) {
+    gameRunning = false;
+    accelBtn.disabled = true;
+
+    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE) {
+      info.textContent = "🎉 あなたの勝ち！　すごい！";
+      playerCar.innerHTML = "🚗✨";
+    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE) {
+      info.textContent = "残念… BOTの勝ち😢";
+      botCar.innerHTML = "🤖🏆";
+    } else {
+      info.textContent = "ドロー！　すごい接戦！";
     }
 
-    function update() {
-      if (!gameRunning) return;
+    resetBtn.classList.remove('hidden');
+    return;
+  }
 
-      // タッチ/キー操作
-      if (accelerating || keys.ArrowRight || keys.d) {
-        playerSpeed += 0.22;
-      }
-      if (decelerating || keys.ArrowLeft || keys.a) {
-        playerSpeed -= 0.22;
-      }
+  requestAnimationFrame(updatePositions);
+}
 
-      playerSpeed *= 0.955; // 摩擦
-      playerSpeed = Math.max(-5, Math.min(7, playerSpeed));
+startBtn.onclick = () => {
+  if (gameRunning) return;
+  resetGame(); // 念のため
+  gameRunning = true;
+  playerSpeed = 0;
+  botSpeed = 3 + Math.random() * 4; // Botに少しハンデ
 
-      playerX += playerSpeed * 0.4; // 左右移動幅を調整
+  info.textContent = "レース開始！　タイミングよく「加速！」を押そう！";
+  startBtn.disabled = true;
+  accelBtn.disabled = false;
 
-      const maxX = getGameWidth() - player.offsetWidth;
-      if (playerX < 30 || playerX > maxX - 30) {
-        playerSpeed *= 0.38; // 壁で大減速
-      }
-      playerX = Math.max(30, Math.min(maxX - 30, playerX));
+  lastTime = 0;
+  requestAnimationFrame(updatePositions);
+};
 
-      player.style.left = playerX + 'px';
+accelBtn.onclick = () => {
+  if (!gameRunning) return;
+  playerSpeed += 11 + Math.random() * 5; // 11〜16くらいの加速
+  playerSpeed = Math.min(playerSpeed, 32); // 上限
+  info.textContent = "ブースト！　現在の速度：" + Math.floor(playerSpeed);
+};
 
-      // CPUの簡易AI
-      let cpuAccel = 0.14;
-      const nearCurve = curves.some(c => Math.abs(distanceLeft - c.start) < 350);
-      if (nearCurve) cpuAccel *= 0.65;
+resetBtn.onclick = resetGame;
 
-      cpuSpeed += (Math.random() * 0.05 - 0.025) + cpuAccel * 0.7;
-      cpuSpeed = Math.max(1.5, Math.min(4.5, cpuSpeed));
+// 初回リセット
+resetGame();
+</script>
 
-      distanceLeft -= (playerSpeed + cpuSpeed) * 0.9;
-      distEl.textContent = Math.max(0, Math.floor(distanceLeft));
-
-      // カーブ演出
-      let curveOffset = 0;
-      for (let c of curves) {
-        if (distanceLeft < c.start + 250 && distanceLeft > c.start - 450) {
-          const t = (distanceLeft - (c.start - 450)) / 700;
-          curveOffset = Math.sin(t * Math.PI * 2) * 35 * c.power;
-        }
-      }
-      document.getElementById('road').style.transform = `translateX(${curveOffset}px)`;
-
-      // ゴール
-      if (distanceLeft <= 0) {
-        gameRunning = false;
-        goal.style.display = 'block';
-        goal.textContent = playerSpeed > cpuSpeed ? "YOU WIN!!" : "CPU WIN...";
-        goal.style.color = playerSpeed > cpuSpeed ? "#0f0" : "#f44";
-      }
-
-      animationFrameId = requestAnimationFrame(update);
-    }
-
-    const keys = {};
-    window.addEventListener('keydown', e => { if (['ArrowLeft','ArrowRight','a','d'].includes(e.key)) e.preventDefault(); keys[e.key] = true; });
-    window.addEventListener('keyup',   e => keys[e.key] = false);
-
-    // タッチイベント（画面左半分＝減速、右半分＝加速）
-    function handleTouch(e) {
-      e.preventDefault();
-      accelerating = false;
-      decelerating = false;
-
-      for (let touch of e.touches) {
-        const rect = game.getBoundingClientRect();
-        const tx = touch.clientX - rect.left;
-        if (tx < rect.width / 2) {
-          decelerating = true;
-        } else {
-          accelerating = true;
-        }
-      }
-    }
-
-    game.addEventListener('touchstart', handleTouch, { passive: false });
-    game.addEventListener('touchmove',  handleTouch, { passive: false });
-    game.addEventListener('touchend',   e => { e.preventDefault(); accelerating = false; decelerating = false; });
-    game.addEventListener('touchcancel', e => { e.preventDefault(); accelerating = false; decelerating = false; });
-
-    function startGame() {
-      cancelAnimationFrame(animationFrameId);
-      gameRunning = true;
-      playerX = (getGameWidth() - player.offsetWidth) / 2;
-      player.style.left = playerX + 'px';
-      playerSpeed = 0;
-      cpuSpeed = 2.8;
-      distanceLeft = 3000;
-      cpu.style.left = (getGameWidth() * 0.3) + 'px';
-      goal.style.display = 'none';
-      update();
-    }
-
-    // 画面サイズが変わったら再調整
-    window.addEventListener('resize', () => {
-      if (gameRunning) playerX = Math.min(playerX, getGameWidth() - player.offsetWidth);
-    });
-
-    // 初回はボタン待ち
-  </script>
 </body>
 </html>
