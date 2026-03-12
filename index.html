@@ -3,38 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zero Ace: WTM Style</title>
+    <title>Zero Ace: WTM Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: 'Arial', sans-serif; }
-        #ui { position: absolute; inset: 0; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; font-family: 'Courier New', monospace; }
+        #ui-layer { position: absolute; inset: 0; pointer-events: none; color: #00ff00; text-shadow: 1px 1px 2px black; }
         
+        /* HUD */
+        .hud-stats { position: absolute; top: 40px; left: 20px; font-size: 18px; font-weight: bold; }
+        .reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 2px solid rgba(0,255,0,0.5); border-radius: 50%; }
+        .reticle::before { content: ''; position: absolute; top: 50%; left: -10px; right: -10px; height: 2px; background: rgba(0,255,0,0.5); }
+        .reticle::after { content: ''; position: absolute; left: 50%; top: -10px; bottom: -10px; width: 2px; background: rgba(0,255,0,0.5); }
+
         /* 操作系 */
-        #joystick-zone { position: absolute; bottom: 50px; left: 50px; width: 140px; height: 140px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: auto; }
-        #joystick-handle { position: absolute; top: 45px; left: 45px; width: 50px; height: 50px; background: white; border-radius: 50%; opacity: 0.5; display: none; }
-        
-        #look-zone { position: absolute; top: 0; right: 0; width: 60%; height: 100%; pointer-events: auto; }
-        
+        #joystick-zone { position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px; border: 2px solid rgba(0,255,0,0.3); border-radius: 50%; pointer-events: auto; }
         #fire-btn { 
-            position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; 
-            background: radial-gradient(#ff4b2b, #ff416c); border-radius: 50%; 
-            border: 4px solid white; color: white; font-weight: bold; 
-            display: flex; align-items: center; justify-content: center; 
-            pointer-events: auto; box-shadow: 0 0 20px rgba(255,0,0,0.5);
+            position: absolute; bottom: 40px; right: 40px; width: 100px; height: 100px; 
+            background: rgba(255,0,0,0.2); border: 3px solid #ff0000; border-radius: 50%; 
+            color: #ff0000; font-weight: bold; display: flex; align-items: center; justify-content: center; 
+            pointer-events: auto; font-size: 20px;
         }
         
-        #weapon-select { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: auto; }
-        .w-btn { padding: 12px 20px; background: rgba(0,0,0,0.6); color: white; border: 1px solid white; margin: 0 5px; border-radius: 5px; }
+        #weapon-select { position: absolute; top: 20px; right: 20px; pointer-events: auto; }
+        .w-btn { padding: 10px; background: rgba(0,255,0,0.2); color: #0f0; border: 1px solid #0f0; margin-bottom: 5px; display: block; width: 100px; }
+        .active-w { background: rgba(0,255,0,0.5); color: #fff; }
     </style>
 </head>
 <body>
 
-<div id="ui">
-    <div id="weapon-select">
-        <button class="w-btn" onclick="setWeapon('gun')">20mm機銃</button>
-        <button class="w-btn" onclick="setWeapon('bomb')">250kg爆弾</button>
+<div id="ui-layer">
+    <div class="hud-stats">
+        SPD: <span id="spd-val">0</span> km/h<br>
+        ALT: <span id="alt-val">0</span> m
     </div>
-    <div id="joystick-zone"><div id="joystick-handle"></div></div>
-    <div id="look-zone"></div>
+    <div class="reticle"></div>
+    <div id="weapon-select">
+        <button id="btn-gun" class="w-btn active-w" onclick="setWeapon('gun')">20mm</button>
+        <button id="btn-bomb" class="w-btn" onclick="setWeapon('bomb')">BOMB</button>
+    </div>
+    <div id="joystick-zone"></div>
     <div id="fire-btn">FIRE</div>
 </div>
 
@@ -45,117 +51,145 @@
 <script type="module">
 import * as THREE from 'three';
 
-let scene, camera, renderer, player, planeGroup;
+let scene, camera, renderer, player, propeller, planeGroup;
 let joystick = { x: 0, y: 0, active: false };
-let look = { yaw: 0, pitch: 0, active: false, targetYaw: 0, targetPitch: 0 };
-let bullets = [], bombs = [], enemies = [], particles = [];
+let look = { yaw: 0, pitch: 0, active: false };
+let projectiles = [], enemies = [], particles = [];
 let weaponMode = 'gun';
 let isDead = false;
+let mapType = Math.random() > 0.5 ? 'sea' : 'station';
 
-// WTM風の設定値
-const PLANE_SPEED = 1.8;
-const TURN_SPEED = 0.04;
-const ROLL_MAX = 0.8; // 最大傾き
-const CAM_LERP = 0.08; // カメラの追従遅延（小さいほど遅れる）
+const CONFIG = {
+    speed: 2.0,
+    turn: 0.035,
+    roll: 1.0,
+    camLerp: 0.1
+};
 
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB);
-    scene.fog = new THREE.Fog(0x87CEEB, 200, 1000);
-
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-    sun.position.set(100, 200, 100);
-    sun.castShadow = true;
-    scene.add(sun, new THREE.AmbientLight(0x707070));
+    // 環境光
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(500, 1000, 500);
+    scene.add(sun, new THREE.AmbientLight(0x888888));
 
-    // 機体グループ（回転制御用）
-    planeGroup = new THREE.Group();
-    player = new THREE.Group(); // モデル本体
-    
-    const mat = new THREE.MeshLambertMaterial({color: 0x2d5d2d});
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 4), mat);
-    body.rotation.x = Math.PI / 2;
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 1.2), mat);
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.6), mat);
-    tail.position.set(0, 0, -1.8);
-    
-    player.add(body, wing, tail);
-    planeGroup.add(player);
-    planeGroup.position.y = 100;
-    scene.add(planeGroup);
-
-    // 大地
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(5000, 5000), new THREE.MeshLambertMaterial({color: 0x4a6b4a}));
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-    
-    // 敵ターゲット
-    for(let i=0; i<30; i++) {
-        const en = new THREE.Mesh(new THREE.BoxGeometry(15, 30, 15), new THREE.MeshLambertMaterial({color: 0x8b0000}));
-        en.position.set(Math.random()*1500-750, 15, Math.random()*1500-750);
-        scene.add(en);
-        enemies.push(en);
-    }
-
+    setupMap();
+    createPlayer();
     setupControls();
     animate();
 }
 
-function setupControls() {
-    const jZone = document.getElementById('joystick-zone');
-    const jHandle = document.getElementById('joystick-handle');
-    jZone.addEventListener('touchstart', (e) => { joystick.active = true; jHandle.style.display = 'block'; });
-    jZone.addEventListener('touchmove', (e) => {
-        const rect = jZone.getBoundingClientRect();
-        const t = e.touches[0];
-        joystick.x = Math.max(-1, Math.min(1, (t.clientX - (rect.left + 70)) / 70));
-        joystick.y = Math.max(-1, Math.min(1, (t.clientY - (rect.top + 70)) / 70));
-        jHandle.style.left = (45 + joystick.x * 40) + 'px';
-        jHandle.style.top = (45 + joystick.y * 40) + 'px';
-    });
-    jZone.addEventListener('touchend', () => { joystick.active = false; joystick.x = 0; joystick.y = 0; jHandle.style.display = 'none'; });
+function setupMap() {
+    if (mapType === 'sea') {
+        scene.background = new THREE.Color(0x4488ff);
+        scene.fog = new THREE.Fog(0x4488ff, 500, 3000);
+        const water = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshLambertMaterial({color: 0x0044ff}));
+        water.rotation.x = -Math.PI / 2;
+        scene.add(water);
+        // 敵艦（箱）
+        for(let i=0; i<10; i++) createEnemy(Math.random()*2000-1000, 5, Math.random()*2000-1000, 50, 20, 150);
+    } else {
+        scene.background = new THREE.Color(0x050510);
+        scene.fog = new THREE.Fog(0x050510, 200, 1500);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshLambertMaterial({color: 0x111111}));
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+        // ビル群
+        for(let i=0; i<50; i++) createEnemy(Math.random()*1500-750, 40, Math.random()*1500-750, 30, 80, 30);
+    }
+}
 
-    const lZone = document.getElementById('look-zone');
-    let lastX, lastY;
-    lZone.addEventListener('touchstart', (e) => { look.active = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; });
-    lZone.addEventListener('touchmove', (e) => {
+function createEnemy(x, y, z, w, h, d) {
+    const en = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color: mapType==='sea'?0x777777:0x333344}));
+    en.position.set(x, h/2, z);
+    scene.add(en);
+    enemies.push(en);
+}
+
+function createPlayer() {
+    planeGroup = new THREE.Group();
+    player = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({color: 0x243b24});
+    
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4), mat);
+    body.rotation.x = Math.PI / 2;
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 1.5), mat);
+    
+    // プロペラ
+    propeller = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3, 0.1), new THREE.MeshBasicMaterial({color: 0x000000}));
+    propeller.position.z = 2.1;
+    
+    player.add(body, wing, propeller);
+    planeGroup.add(player);
+    planeGroup.position.y = 150;
+    scene.add(planeGroup);
+}
+
+function setupControls() {
+    const zone = document.getElementById('joystick-zone');
+    zone.addEventListener('touchstart', () => joystick.active = true);
+    zone.addEventListener('touchmove', (e) => {
+        const r = zone.getBoundingClientRect();
         const t = e.touches[0];
-        look.targetYaw -= (t.clientX - lastX) * 0.007;
-        look.targetPitch -= (t.clientY - lastY) * 0.007;
-        look.targetPitch = Math.max(-0.8, Math.min(0.8, look.targetPitch));
+        joystick.x = (t.clientX - (r.left + 60)) / 60;
+        joystick.y = (t.clientY - (r.top + 60)) / 60;
+    });
+    zone.addEventListener('touchend', () => { joystick.active = false; joystick.x = 0; joystick.y = 0; });
+
+    // 右側スライド視点
+    let lastX, lastY;
+    window.addEventListener('touchstart', (e) => { 
+        if(e.touches[0].clientX > window.innerWidth/2) {
+            look.active = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; 
+        }
+    });
+    window.addEventListener('touchmove', (e) => {
+        if(!look.active) return;
+        const t = e.touches[0];
+        look.yaw -= (t.clientX - lastX) * 0.01;
+        look.pitch -= (t.clientY - lastY) * 0.01;
         lastX = t.clientX; lastY = t.clientY;
     });
-    lZone.addEventListener('touchend', () => { look.active = false; });
+    window.addEventListener('touchend', () => look.active = false);
 
     document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
 }
 
-window.setWeapon = (m) => weaponMode = m;
+window.setWeapon = (m) => {
+    weaponMode = m;
+    document.getElementById('btn-gun').classList.toggle('active-w', m==='gun');
+    document.getElementById('btn-bomb').classList.toggle('active-w', m==='bomb');
+};
 
 function fire() {
     if(isDead) return;
-    const b = new THREE.Mesh(new THREE.SphereGeometry(weaponMode === 'gun' ? 0.3 : 0.8), new THREE.MeshBasicMaterial({color: 0xfff000}));
-    b.position.copy(planeGroup.position);
-    b.quaternion.copy(planeGroup.quaternion);
-    b.userData = { mode: weaponMode, velocity: new THREE.Vector3(0,0,1).applyQuaternion(planeGroup.quaternion).multiplyScalar(weaponMode==='gun'?5:1), life: 120 };
-    scene.add(b);
-    bullets.push(b);
+    const p = new THREE.Mesh(
+        new THREE.SphereGeometry(weaponMode === 'gun' ? 0.2 : 0.6), 
+        new THREE.MeshBasicMaterial({color: weaponMode==='gun'?0xffff00:0x222222})
+    );
+    p.position.copy(planeGroup.position);
+    p.quaternion.copy(planeGroup.quaternion);
+    
+    // 速度計算：機体の前進ベクトル + 武装固有の初速
+    const vel = new THREE.Vector3(0, 0, weaponMode === 'gun' ? 6 : 1.5).applyQuaternion(planeGroup.quaternion);
+    p.userData = { type: weaponMode, vel: vel, life: 150 };
+    
+    scene.add(p);
+    projectiles.push(p);
 }
 
 function explode(pos, isPlayer=false) {
-    for(let i=0; i<30; i++) {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: Math.random()>0.3?0xff4400:0x222222}));
-        p.position.copy(pos);
-        p.userData = { v: new THREE.Vector3((Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2), life: 60 };
-        scene.add(p);
-        particles.push(p);
+    for(let i=0; i<40; i++) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshBasicMaterial({color: Math.random()>0.4?0xff5500:0x000000}));
+        m.position.copy(pos);
+        m.userData = { v: new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3), life: 60 };
+        scene.add(m);
+        particles.push(m);
     }
     if(isPlayer) {
         isDead = true;
@@ -168,53 +202,48 @@ function animate() {
     requestAnimationFrame(animate);
 
     if(!isDead) {
-        // 機体の動き: WTM風
-        planeGroup.rotation.y -= joystick.x * TURN_SPEED;
-        planeGroup.rotation.x -= joystick.y * TURN_SPEED * 0.5;
-        
-        // ローリング演出: 旋回に合わせて機体を傾ける
-        player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -joystick.x * ROLL_MAX, 0.1);
-        player.rotation.x = THREE.MathUtils.lerp(player.rotation.x, joystick.y * 0.2, 0.1);
+        // 機体移動
+        planeGroup.rotation.y -= joystick.x * CONFIG.turn;
+        planeGroup.rotation.x -= joystick.y * CONFIG.turn * 0.6;
+        player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -joystick.x * CONFIG.roll, 0.1);
+        planeGroup.translateZ(CONFIG.speed);
+        propeller.rotation.y += 0.8;
 
-        planeGroup.translateZ(PLANE_SPEED);
+        // 自由視点の復帰
+        if(!look.active) { look.yaw *= 0.94; look.pitch *= 0.94; }
 
-        // 自由視点の滑らかな復帰
-        if(!look.active) {
-            look.targetYaw = THREE.MathUtils.lerp(look.targetYaw, 0, 0.05);
-            look.targetPitch = THREE.MathUtils.lerp(look.targetPitch, 0, 0.05);
-        }
-        look.yaw = THREE.MathUtils.lerp(look.yaw, look.targetYaw, 0.1);
-        look.pitch = THREE.MathUtils.lerp(look.pitch, look.targetPitch, 0.1);
+        // カメラ: 旋回時のG演出を追加
+        const camOffset = new THREE.Vector3(Math.sin(look.yaw)*15 + joystick.x*5, Math.sin(look.pitch)*10 + 4, -Math.cos(look.yaw)*15).applyQuaternion(planeGroup.quaternion);
+        camera.position.lerp(planeGroup.position.clone().add(camOffset), CONFIG.camLerp);
+        camera.lookAt(planeGroup.position);
 
-        // カメラ追従: Lerpによる「遊び」
-        const idealOffset = new THREE.Vector3(
-            Math.sin(look.yaw) * 15,
-            Math.sin(look.pitch) * 15 + 4,
-            -Math.cos(look.yaw) * 15
-        ).applyQuaternion(planeGroup.quaternion);
-        
-        const targetCamPos = planeGroup.position.clone().add(idealOffset);
-        camera.position.lerp(targetCamPos, CAM_LERP);
-        camera.lookAt(planeGroup.position.clone().add(new THREE.Vector3(0,1,0)));
+        // HUD更新
+        document.getElementById('spd-val').innerText = Math.floor(CONFIG.speed * 150);
+        document.getElementById('alt-val').innerText = Math.floor(planeGroup.position.y);
 
         if(planeGroup.position.y < 0) explode(planeGroup.position, true);
     }
 
-    // 弾丸・爆弾
-    bullets.forEach((b, i) => {
-        if(b.userData.mode === 'bomb') b.userData.velocity.y -= 0.02;
-        b.position.add(b.userData.velocity);
-        b.userData.life--;
+    // 弾丸・爆弾の更新
+    projectiles.forEach((p, i) => {
+        if(p.userData.type === 'bomb') p.userData.vel.y -= 0.05; // 爆弾のみ重力
+        p.position.add(p.userData.vel);
+        p.userData.life--;
+
+        // 当たり判定
         enemies.forEach(en => {
-            if(b.position.distanceTo(en.position) < 15) { explode(en.position); en.position.y = -500; }
+            if(p.position.distanceTo(en.position) < 20) {
+                explode(en.position);
+                en.position.y = -1000;
+            }
         });
-        if(b.userData.life < 0 || b.position.y < 0) {
-            if(b.position.y < 0) explode(b.position);
-            scene.remove(b); bullets.splice(i, 1);
+
+        if(p.userData.life < 0 || p.position.y < 0) {
+            if(p.position.y < 0) explode(p.position);
+            scene.remove(p); projectiles.splice(i, 1);
         }
     });
 
-    // 爆発パーティクル
     particles.forEach((p, i) => {
         p.position.add(p.userData.v);
         p.userData.life--;
@@ -224,7 +253,6 @@ function animate() {
 
     renderer.render(scene, camera);
 }
-
 init();
 </script>
 </body>
