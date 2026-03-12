@@ -3,74 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>スロットカー対決！（世界のアソビ大全51風・調整版）</title>
+  <title>スロットカー対決！（世界のアソビ大全51風・超楽しい版）</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #0d1b2a;
+      background: linear-gradient(#0d1b2a, #1e3a5f);
       color: #e0e0e0;
       margin: 0;
       padding: 20px;
       text-align: center;
+      overflow: hidden;
     }
     h1 {
       color: #ffd60a;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
+      text-shadow: 0 0 15px #ffd60a;
     }
     #track {
       width: 95%;
-      max-width: 1100px;   /* ← コースを大幅に長くした！ */
-      height: 180px;
-      margin: 30px auto;
-      background: linear-gradient(to right, #222, #444);
-      border: 6px solid #333;
-      border-radius: 15px;
+      max-width: 1200px;
+      height: 200px;
+      margin: 25px auto;
+      background: linear-gradient(to right, #222, #444, #222);
+      border: 8px solid #333;
+      border-radius: 20px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      box-shadow: 0 0 40px rgba(255,214,10,0.3);
     }
     .slot-line {
       position: absolute;
-      height: 4px;
-      background: repeating-linear-gradient(
-        to right,
-        transparent 0px,
-        #ffd60a 0px,
-        #ffd60a 12px,
-        transparent 12px,
-        transparent 24px
-      );
+      height: 5px;
+      background: repeating-linear-gradient(to right, transparent, #ffd60a 0px, #ffd60a 15px, transparent 15px, transparent 30px);
       width: 100%;
-      top: 45%;
+      top: 48%;
     }
     .car {
-      width: 80px;
-      height: 45px;
+      width: 85px;
+      height: 48px;
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 42px;
-      transition: left 0.05s linear;
-      text-shadow: 0 0 10px currentColor;
+      font-size: 45px;
+      transition: left 0.04s linear;
+      text-shadow: 0 0 12px currentColor;
+      z-index: 5;
     }
-    #player-car   { left: 0; color: #ff4d6d; }
-    #bot-car      { left: 0; color: #00d4ff; top: 25%; }
+    #player-car { left: 0; color: #ff4d6d; }
+    #bot-car    { left: 0; color: #00d4ff; top: 22%; }
+
+    .powerup {
+      position: absolute;
+      font-size: 38px;
+      top: 32%;
+      z-index: 3;
+      animation: sparkle 0.8s infinite alternate;
+      text-shadow: 0 0 20px #ffd60a;
+    }
+    @keyframes sparkle {
+      from { transform: scale(1); }
+      to   { transform: scale(1.3); }
+    }
 
     #finish {
       position: absolute;
       right: 15px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 65px;
+      font-size: 72px;
       color: #ffd60a;
-      text-shadow: 0 0 20px #ffd60a;
+      text-shadow: 0 0 25px #ffd60a;
     }
 
     #info {
-      font-size: 1.4rem;
-      margin: 15px 0;
-      min-height: 2em;
+      font-size: 1.45rem;
+      margin: 12px 0;
+      min-height: 2.2em;
       font-weight: bold;
+      text-shadow: 0 0 8px #ffd60a;
     }
 
     button {
@@ -78,38 +88,30 @@
       padding: 16px 40px;
       margin: 8px;
       border: none;
-      border-radius: 12px;
-      background: #ff4d6d;
+      border-radius: 14px;
       color: white;
       cursor: pointer;
       transition: all 0.2s;
     }
-    button:hover { background: #ff758c; transform: scale(1.08); }
-    button:disabled { background: #555; cursor: not-allowed; transform: none; }
-
-    #startBtn { background: #00d4ff; font-size: 1.6rem; }
-    #accelBtn {
-      background: #ffaa00;
-      font-size: 1.8rem;
-      padding: 20px 50px;
-      box-shadow: 0 0 15px #ffaa00;
-    }
-    #accelBtn:active {
-      background: #ffdd00;
-      transform: scale(0.95);
-    }
+    #startBtn  { background: #00d4ff; font-size: 1.65rem; }
+    #accelBtn  { background: #ffaa00; font-size: 1.85rem; padding: 22px 55px; box-shadow: 0 0 20px #ffaa00; }
+    #nitroBtn  { background: #ff2d00; font-size: 1.65rem; padding: 18px 45px; box-shadow: 0 0 25px #ff2d00; }
+    button:hover { transform: scale(1.1); }
+    button:active { transform: scale(0.92); }
+    button:disabled { background: #555; transform: none; }
 
     .hidden { display: none; }
     .speed {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       color: #ffd60a;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
 
-<h1>スロットカー対決！（世界のアソビ大全51風・最終調整）</h1>
-<p style="color:#aaa;">コースを1.8倍長くしました！<br>BOTはもう加速し続けません（自然に減速＋ミス多め）<br>アクセルは「ポン、ポン、ポン…」と短く連打がコツ！</p>
+<h1>スロットカー対決！ 超楽しい版 🏎️🔥</h1>
+<p style="color:#aaa; margin-bottom:15px;">NITROで爆速！　⚡パワーアップ出現！　勝ったら花火！<br>アクセル連打＋NITROで本家より熱いレース！</p>
 
 <div id="track">
   <div class="slot-line"></div>
@@ -118,33 +120,69 @@
   <div id="bot-car" class="car">🤖</div>
 </div>
 
-<div id="info">準備OK！　スタート押して、アクセルをリズムよく操作しよう！</div>
+<div id="info">準備OK！　スタートしてアクセル連打＋NITROでぶっ飛ばせ！</div>
 <div class="speed" id="speedDisplay">あなたの速度: 0　｜　BOT速度: 0</div>
 
 <button id="startBtn">スタート！</button>
 <button id="accelBtn">アクセル<br>（押して加速）</button>
+<button id="nitroBtn">NITRO！<br>（一発爆速）</button>
 <button id="resetBtn" class="hidden">もう一回レース</button>
 
 <script>
-const playerCar = document.getElementById('player-car');
-const botCar    = document.getElementById('bot-car');
-const info      = document.getElementById('info');
-const speedDisp = document.getElementById('speedDisplay');
-const startBtn  = document.getElementById('startBtn');
-const accelBtn  = document.getElementById('accelBtn');
-const resetBtn  = document.getElementById('resetBtn');
+const track       = document.getElementById('track');
+const playerCar   = document.getElementById('player-car');
+const botCar      = document.getElementById('bot-car');
+const info        = document.getElementById('info');
+const speedDisp   = document.getElementById('speedDisplay');
+const startBtn    = document.getElementById('startBtn');
+const accelBtn    = document.getElementById('accelBtn');
+const nitroBtn    = document.getElementById('nitroBtn');
+const resetBtn    = document.getElementById('resetBtn');
 
 let TRACK_WIDTH = 0;
 let FINISH_LINE = 0;
-
 let playerPos = 0;
-let botPos    = 0;
+let botPos = 0;
 let playerSpeed = 0;
-let botSpeed    = 0;
+let botSpeed = 0;
 let isAccelerating = false;
 let holdDuration = 0;
 let gameRunning = false;
 let lastTime = 0;
+let powerup = null;
+let powerupCollected = false;
+let overtook = false;
+
+function createPowerup() {
+  if (powerup) powerup.remove();
+  powerup = document.createElement('div');
+  powerup.className = 'powerup';
+  powerup.textContent = '⚡';
+  powerup.style.left = (FINISH_LINE * (0.38 + Math.random() * 0.3)) + 'px'; // 38%〜68%のランダム位置
+  track.appendChild(powerup);
+  powerupCollected = false;
+}
+
+function launchConfetti() {
+  const emojis = ['🎉', '✨', '🏆', '🚗', '🔥'];
+  for (let i = 0; i < 180; i++) {
+    const c = document.createElement('div');
+    c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    c.style.position = 'fixed';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.top = '-30px';
+    c.style.fontSize = (18 + Math.random() * 22) + 'px';
+    c.style.zIndex = 9999;
+    c.style.transition = `all ${Math.random() * 3 + 2.5}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+    document.body.appendChild(c);
+
+    setTimeout(() => {
+      c.style.top = '110vh';
+      c.style.transform = `rotate(${Math.random() * 1200 - 300}deg)`;
+      c.style.opacity = 0;
+    }, 30);
+  }
+}
 
 function resetGame() {
   playerPos = 0;
@@ -153,15 +191,19 @@ function resetGame() {
   botSpeed = 0;
   isAccelerating = false;
   holdDuration = 0;
+  overtook = false;
   playerCar.style.left = '0px';
   botCar.style.left = '0px';
   playerCar.textContent = '🚗';
   botCar.textContent = '🤖';
-  info.textContent = "準備OK！　スタート押して、アクセルをリズムよく操作しよう！";
+  info.textContent = "準備OK！　スタートしてアクセル連打＋NITROでぶっ飛ばせ！";
   speedDisp.textContent = "あなたの速度: 0　｜　BOT速度: 0";
   startBtn.disabled = false;
   accelBtn.disabled = true;
+  nitroBtn.disabled = true;
   resetBtn.classList.add('hidden');
+  if (powerup) powerup.remove();
+  powerup = null;
   gameRunning = false;
 }
 
@@ -171,42 +213,56 @@ function updatePositions(timestamp) {
   const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
 
-  // === プレイヤー（そのまま）===
+  // プレイヤー
   if (isAccelerating) {
-    playerSpeed += 20 * dt;
+    playerSpeed += 21 * dt;
     holdDuration += dt;
-    if (holdDuration > 1.2 && Math.random() < 0.18) {
-      playerSpeed *= 0.3;
-      info.textContent = "⚠️ コースアウト！　スピード大ダウン！";
+    if (holdDuration > 1.15 && Math.random() < 0.16) {
+      playerSpeed *= 0.25;
+      info.textContent = "⚠️ コースアウト！　大減速…";
       holdDuration = 0;
     }
   } else {
     holdDuration = 0;
   }
-  playerSpeed *= 0.93;
-  playerSpeed = Math.max(0, Math.min(playerSpeed, 38));
-  playerPos += playerSpeed * dt * 1400;
-  playerPos = Math.min(playerPos, FINISH_LINE + 50);
+  playerSpeed *= 0.925;
+  playerSpeed = Math.max(0, Math.min(playerSpeed, 42));
+  playerPos += playerSpeed * dt * 1450;
+  playerPos = Math.min(playerPos, FINISH_LINE + 60);
 
-  // === BOT（ここが大幅変更！）===
-  // 1. 自然減速を必ず入れる（加速し続けなくした）
-  botSpeed *= 0.89;   // ← これで勝手に減速する
-
-  // 2. 加速はたまにしかしない（確率大幅ダウン）
-  if (Math.random() < 0.55) {
-    botSpeed += (Math.random() * 0.45 + 0.35);
-  } else {
-    // ミス多め
-    botSpeed *= 0.22;
-    if (Math.random() < 0.4) {
-      info.textContent = "BOTがコースアウト！　チャンス！";
+  // パワーアップ判定
+  if (powerup && !powerupCollected) {
+    const puLeft = parseFloat(powerup.style.left);
+    if (playerPos > puLeft - 30 && playerPos < puLeft + 50) {
+      powerupCollected = true;
+      powerup.style.transition = 'all 0.4s';
+      powerup.style.transform = 'scale(3)';
+      powerup.style.opacity = '0';
+      setTimeout(() => { if (powerup) powerup.remove(); }, 500);
+      playerSpeed += 22;
+      info.innerHTML = "⚡ <strong>パワーアップゲット！</strong> 爆速になった！！";
     }
   }
-  botSpeed = Math.min(botSpeed, 11);   // 上限も低め固定
-  botPos += botSpeed * dt * 1050;
-  botPos = Math.min(botPos, FINISH_LINE + 50);
 
-  // 表示
+  // オーバーテイク演出
+  if (!overtook && playerPos > botPos + 35) {
+    overtook = true;
+    info.textContent = "💨 オーバーテイク成功！　ナイス！";
+  }
+
+  // BOT（自然減速＋ミス多め）
+  botSpeed *= 0.88;
+  if (Math.random() < 0.52) {
+    botSpeed += (Math.random() * 0.48 + 0.38);
+  } else {
+    botSpeed *= 0.18;
+    if (Math.random() < 0.35) info.textContent = "🤖 BOTがコースアウト！";
+  }
+  botSpeed = Math.min(botSpeed, 11.5);
+  botPos += botSpeed * dt * 1080;
+  botPos = Math.min(botPos, FINISH_LINE + 60);
+
+  // 表示更新
   playerCar.style.left = playerPos + 'px';
   botCar.style.left = botPos + 'px';
   speedDisp.textContent = `あなたの速度: ${Math.floor(playerSpeed)}　｜　BOT速度: ${Math.floor(botSpeed)}`;
@@ -215,16 +271,18 @@ function updatePositions(timestamp) {
   if (playerPos >= FINISH_LINE || botPos >= FINISH_LINE) {
     gameRunning = false;
     accelBtn.disabled = true;
+    nitroBtn.disabled = true;
     isAccelerating = false;
 
-    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 40) {
-      info.innerHTML = "🎉 <strong>あなたの勝ち！</strong>　完璧！";
-      playerCar.textContent = "🚗✨";
-    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 40) {
-      info.innerHTML = "😢 BOTの勝ち…　もう少し長押し短くしてみて！";
+    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 35) {
+      info.innerHTML = "🎉 <strong>あなたの圧勝！！</strong>　神プレイ！！";
+      playerCar.textContent = "🚗✨🔥";
+      launchConfetti();
+    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 35) {
+      info.innerHTML = "😢 BOTの勝利…　次はNITROを上手に使おう！";
       botCar.textContent = "🤖🏆";
     } else {
-      info.textContent = "ドロー！　いい勝負だった！";
+      info.textContent = "ドロー！　激アツ接戦だった！！";
     }
     resetBtn.classList.remove('hidden');
     return;
@@ -233,27 +291,44 @@ function updatePositions(timestamp) {
   requestAnimationFrame(updatePositions);
 }
 
-// アクセル操作
+// 操作
 accelBtn.addEventListener('mousedown', () => { if (gameRunning) isAccelerating = true; });
 accelBtn.addEventListener('mouseup', () => { isAccelerating = false; });
 accelBtn.addEventListener('mouseleave', () => { isAccelerating = false; });
 accelBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameRunning) isAccelerating = true; });
-accelBtn.addEventListener('touchend', (e) => { e.preventDefault(); isAccelerating = false; });
+accelBtn.addEventListener('touchend', () => { isAccelerating = false; });
+
+nitroBtn.onclick = () => {
+  if (!gameRunning) return;
+  playerSpeed += 28;
+  playerCar.textContent = '🚗🔥';
+  setTimeout(() => { if (gameRunning) playerCar.textContent = '🚗'; }, 700);
+
+  if (Math.random() < 0.28) {
+    playerSpeed *= 0.15;
+    info.textContent = "NITRO失敗！　大クラッシュ😱";
+  } else {
+    info.textContent = "NITRO発動！！　爆速モード！！";
+  }
+};
 
 startBtn.onclick = () => {
-  // コース長を毎回正確に取得（リサイズ対応）
-  TRACK_WIDTH = document.getElementById('track').clientWidth - 100;
-  FINISH_LINE = TRACK_WIDTH * 1.8;   // ← ここでコースを1.8倍長く！
+  TRACK_WIDTH = track.clientWidth - 110;
+  FINISH_LINE = TRACK_WIDTH * 1.85;
 
   resetGame();
   gameRunning = true;
   playerSpeed = 0;
-  botSpeed = 1.5 + Math.random() * 1.5;
+  botSpeed = 1.2 + Math.random() * 1.8;
   holdDuration = 0;
+  overtook = false;
 
-  info.textContent = "レース開始！　アクセルは短くポンポン連打が最速！　長押ししすぎ注意！";
+  createPowerup();
+
+  info.textContent = "レース開始！　アクセル連打＋NITRO＋⚡で最速を目指せ！";
   startBtn.disabled = true;
   accelBtn.disabled = false;
+  nitroBtn.disabled = false;
 
   lastTime = 0;
   requestAnimationFrame(updatePositions);
