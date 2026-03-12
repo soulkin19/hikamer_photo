@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>スロットカー対決！ あなた vs BOT</title>
+  <title>スロットカー対決！（世界のアソビ大全51風）</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -20,111 +20,145 @@
     #track {
       width: 90%;
       max-width: 800px;
-      height: 160px;
+      height: 180px;
       margin: 30px auto;
-      background: linear-gradient(to right, #333, #555);
-      border: 4px solid #444;
-      border-radius: 12px;
+      background: linear-gradient(to right, #222, #444);
+      border: 6px solid #333;
+      border-radius: 15px;
       position: relative;
       overflow: hidden;
       box-shadow: 0 0 30px rgba(0,0,0,0.8);
     }
+    .slot-line {
+      position: absolute;
+      height: 4px;
+      background: repeating-linear-gradient(
+        to right,
+        transparent 0px,
+        #ffd60a 0px,
+        #ffd60a 12px,
+        transparent 12px,
+        transparent 24px
+      );
+      width: 100%;
+      top: 45%;
+    }
     .car {
-      width: 70px;
-      height: 40px;
+      width: 80px;
+      height: 45px;
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 38px;
-      transition: left 0.08s linear;
-      text-shadow: 0 0 8px currentColor;
+      font-size: 42px;
+      transition: left 0.05s linear;
+      text-shadow: 0 0 10px currentColor;
     }
     #player-car   { left: 0; color: #ff4d6d; }
-    #bot-car      { left: 0; color: #00d4ff; top: 20%; }
+    #bot-car      { left: 0; color: #00d4ff; top: 25%; }
 
     #finish {
       position: absolute;
-      right: 20px;
+      right: 15px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 60px;
+      font-size: 65px;
       color: #ffd60a;
-      text-shadow: 0 0 15px #ffd60a;
-      pointer-events: none;
+      text-shadow: 0 0 20px #ffd60a;
     }
 
     #info {
-      font-size: 1.3rem;
-      margin: 20px 0;
-      min-height: 1.8em;
+      font-size: 1.4rem;
+      margin: 15px 0;
+      min-height: 2em;
+      font-weight: bold;
     }
 
     button {
-      font-size: 1.4rem;
-      padding: 14px 32px;
-      margin: 10px;
+      font-size: 1.5rem;
+      padding: 16px 40px;
+      margin: 8px;
       border: none;
       border-radius: 12px;
       background: #ff4d6d;
       color: white;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
     }
-    button:hover { background: #ff758c; transform: scale(1.05); }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-      transform: none;
-    }
+    button:hover { background: #ff758c; transform: scale(1.08); }
+    button:disabled { background: #555; cursor: not-allowed; transform: none; }
 
-    #startBtn { background: #00d4ff; }
-    #startBtn:hover { background: #40e0ff; }
+    #startBtn { background: #00d4ff; font-size: 1.6rem; }
+    #accelBtn {
+      background: #ffaa00;
+      font-size: 1.8rem;
+      padding: 20px 50px;
+      box-shadow: 0 0 15px #ffaa00;
+    }
+    #accelBtn:active {
+      background: #ffdd00;
+      transform: scale(0.95);
+    }
 
     .hidden { display: none; }
+    .speed {
+      font-size: 1.1rem;
+      color: #ffd60a;
+    }
   </style>
 </head>
 <body>
 
-<h1>スロットカー対決！ あなた vs BOT</h1>
+<h1>スロットカー対決！（世界のアソビ大全51風）</h1>
+<p style="color:#aaa;">アクセルを押しっぱなしで加速・離すと減速！<br>長押ししすぎると「コースアウト」の危険あり！</p>
 
 <div id="track">
+  <div class="slot-line"></div>
   <div id="finish">🏁</div>
   <div id="player-car" class="car">🚗</div>
   <div id="bot-car" class="car">🤖</div>
 </div>
 
-<div id="info">準備OK！　スタートボタンを押してね</div>
+<div id="info">準備OK！　スタートを押してアクセルをタイミングよく操作しよう！</div>
+<div class="speed" id="speedDisplay">あなたの速度: 0　｜　BOT速度: 0</div>
 
 <button id="startBtn">スタート！</button>
-<button id="accelBtn" disabled>加速！</button>
-<button id="resetBtn" class="hidden">もう一回</button>
+<button id="accelBtn">アクセル<br>（押して加速）</button>
+<button id="resetBtn" class="hidden">もう一回レース</button>
 
 <script>
 const playerCar = document.getElementById('player-car');
 const botCar    = document.getElementById('bot-car');
 const info      = document.getElementById('info');
+const speedDisp = document.getElementById('speedDisplay');
 const startBtn  = document.getElementById('startBtn');
 const accelBtn  = document.getElementById('accelBtn');
 const resetBtn  = document.getElementById('resetBtn');
 
-const TRACK_WIDTH = document.getElementById('track').clientWidth - 80; // 車の幅を引く
+const TRACK_WIDTH = document.getElementById('track').clientWidth - 100;
 const FINISH_LINE = TRACK_WIDTH;
 
 let playerPos = 0;
 let botPos    = 0;
-let gameRunning = false;
 let playerSpeed = 0;
 let botSpeed    = 0;
-let lastTime    = 0;
+let isAccelerating = false;
+let holdDuration = 0;
+let gameRunning = false;
+let lastTime = 0;
 
 function resetGame() {
   playerPos = 0;
-  botPos    = 0;
+  botPos = 0;
   playerSpeed = 0;
-  botSpeed    = 0;
+  botSpeed = 0;
+  isAccelerating = false;
+  holdDuration = 0;
   playerCar.style.left = '0px';
-  botCar.style.left    = '0px';
-  info.textContent = "準備OK！　スタートボタンを押してね";
+  botCar.style.left = '0px';
+  playerCar.textContent = '🚗';
+  botCar.textContent = '🤖';
+  info.textContent = "準備OK！　スタートを押してアクセルをタイミングよく操作しよう！";
+  speedDisp.textContent = "あなたの速度: 0　｜　BOT速度: 0";
   startBtn.disabled = false;
   accelBtn.disabled = true;
   resetBtn.classList.add('hidden');
@@ -133,46 +167,59 @@ function resetGame() {
 
 function updatePositions(timestamp) {
   if (!gameRunning) return;
-
   if (!lastTime) lastTime = timestamp;
-  const dt = (timestamp - lastTime) / 1000; // 秒
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
 
-  // プレイヤーの速度変化（摩擦あり）
-  playerSpeed *= 0.96;           // 自然減速
-  playerPos += playerSpeed * dt * 1800;
-
-  // Botはちょっと賢い（たまにミスする）
-  if (Math.random() < 0.97) {
-    botSpeed += (Math.random() * 0.8 + 0.9); // 0.9〜1.7くらいの加速
+  // プレイヤー（世界のアソビ大全51風アクセル）
+  if (isAccelerating) {
+    playerSpeed += 18 * dt;           // 押し続けると加速
+    holdDuration += dt;
+    // 長押ししすぎるとコースアウトリスク（本家風）
+    if (holdDuration > 1.0 && Math.random() < 0.25) {
+      playerSpeed *= 0.25;
+      info.textContent = "⚠️ コースアウト！　スピード落ちた！";
+      holdDuration = 0;
+    }
   } else {
-    botSpeed *= 0.4; // たまに大きく減速（ミス）
+    holdDuration = 0;
   }
-  botSpeed = Math.min(botSpeed, 28); // 上限
-  botPos += botSpeed * dt * 1400;
+  playerSpeed *= 0.92;                 // 自然減速（離すとゆっくり止まる）
+  playerSpeed = Math.max(0, Math.min(playerSpeed, 35));
 
-  // 位置制限
-  playerPos = Math.min(playerPos, FINISH_LINE + 30);
-  botPos    = Math.min(botPos,    FINISH_LINE + 30);
+  playerPos += playerSpeed * dt * 1350;
+  playerPos = Math.min(playerPos, FINISH_LINE + 50);
 
+  // BOT（本家CPUより優しく、たまにミス）
+  if (Math.random() < 0.88) {
+    botSpeed += (Math.random() * 0.7 + 0.6);
+  } else {
+    botSpeed *= 0.35;   // たまに大きく減速（ミス）
+  }
+  botSpeed = Math.min(botSpeed, 19);   // BOT上限を大幅ダウン（前より遅め）
+  botPos += botSpeed * dt * 1250;
+  botPos = Math.min(botPos, FINISH_LINE + 50);
+
+  // 表示更新
   playerCar.style.left = playerPos + 'px';
-  botCar.style.left    = botPos + 'px';
+  botCar.style.left = botPos + 'px';
+  speedDisp.textContent = `あなたの速度: ${Math.floor(playerSpeed)}　｜　BOT速度: ${Math.floor(botSpeed)}`;
 
   // 勝敗判定
   if (playerPos >= FINISH_LINE || botPos >= FINISH_LINE) {
     gameRunning = false;
     accelBtn.disabled = true;
+    isAccelerating = false;
 
-    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE) {
-      info.textContent = "🎉 あなたの勝ち！　すごい！";
-      playerCar.innerHTML = "🚗✨";
-    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE) {
-      info.textContent = "残念… BOTの勝ち😢";
-      botCar.innerHTML = "🤖🏆";
+    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 20) {
+      info.innerHTML = "🎉 <strong>あなたの勝ち！</strong>　本家並みに上手い！";
+      playerCar.textContent = "🚗✨";
+    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 20) {
+      info.innerHTML = "😢 BOTの勝ち…　もう少しアクセルをポンポン連打してみて！";
+      botCar.textContent = "🤖🏆";
     } else {
-      info.textContent = "ドロー！　すごい接戦！";
+      info.textContent = "ドロー！　激戦だったね！";
     }
-
     resetBtn.classList.remove('hidden');
     return;
   }
@@ -180,14 +227,27 @@ function updatePositions(timestamp) {
   requestAnimationFrame(updatePositions);
 }
 
+// アクセルボタン（押してる間だけ加速）
+accelBtn.addEventListener('mousedown', () => { if (gameRunning) isAccelerating = true; });
+accelBtn.addEventListener('mouseup', () => { isAccelerating = false; });
+accelBtn.addEventListener('mouseleave', () => { isAccelerating = false; });
+accelBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameRunning) isAccelerating = true;
+});
+accelBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  isAccelerating = false;
+});
+
 startBtn.onclick = () => {
-  if (gameRunning) return;
-  resetGame(); // 念のため
+  resetGame();
   gameRunning = true;
   playerSpeed = 0;
-  botSpeed = 3 + Math.random() * 4; // Botに少しハンデ
+  botSpeed = 3 + Math.random() * 3;
+  holdDuration = 0;
 
-  info.textContent = "レース開始！　タイミングよく「加速！」を押そう！";
+  info.textContent = "レース開始！　アクセルを押して加速・離して調整！　長押ししすぎ注意！";
   startBtn.disabled = true;
   accelBtn.disabled = false;
 
@@ -195,16 +255,9 @@ startBtn.onclick = () => {
   requestAnimationFrame(updatePositions);
 };
 
-accelBtn.onclick = () => {
-  if (!gameRunning) return;
-  playerSpeed += 11 + Math.random() * 5; // 11〜16くらいの加速
-  playerSpeed = Math.min(playerSpeed, 32); // 上限
-  info.textContent = "ブースト！　現在の速度：" + Math.floor(playerSpeed);
-};
-
 resetBtn.onclick = resetGame;
 
-// 初回リセット
+// 初回セット
 resetGame();
 </script>
 
