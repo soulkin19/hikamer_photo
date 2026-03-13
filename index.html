@@ -3,341 +3,284 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>スロットカー対決！（世界のアソビ大全51風・超楽しい版）</title>
+  <title>ヒカマニ画像データベース</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: linear-gradient(#0d1b2a, #1e3a5f);
-      color: #e0e0e0;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      padding: 8px;
+    }
+    .card {
+      background: #1f2937;
+      border-radius: 12px;
       overflow: hidden;
-    }
-    h1 {
-      color: #ffd60a;
-      margin-bottom: 5px;
-      text-shadow: 0 0 15px #ffd60a;
-    }
-    #track {
-      width: 95%;
-      max-width: 1200px;
-      height: 200px;
-      margin: 25px auto;
-      background: linear-gradient(to right, #222, #444, #222);
-      border: 8px solid #333;
-      border-radius: 20px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 0 40px rgba(255,214,10,0.3);
-    }
-    .slot-line {
-      position: absolute;
-      height: 5px;
-      background: repeating-linear-gradient(to right, transparent, #ffd60a 0px, #ffd60a 15px, transparent 15px, transparent 30px);
-      width: 100%;
-      top: 48%;
-    }
-    .car {
-      width: 85px;
-      height: 48px;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 45px;
-      transition: left 0.04s linear;
-      text-shadow: 0 0 12px currentColor;
-      z-index: 5;
-    }
-    #player-car { left: 0; color: #ff4d6d; }
-    #bot-car    { left: 0; color: #00d4ff; top: 22%; }
-
-    .powerup {
-      position: absolute;
-      font-size: 38px;
-      top: 32%;
-      z-index: 3;
-      animation: sparkle 0.8s infinite alternate;
-      text-shadow: 0 0 20px #ffd60a;
-    }
-    @keyframes sparkle {
-      from { transform: scale(1); }
-      to   { transform: scale(1.3); }
-    }
-
-    #finish {
-      position: absolute;
-      right: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 72px;
-      color: #ffd60a;
-      text-shadow: 0 0 25px #ffd60a;
-    }
-
-    #info {
-      font-size: 1.45rem;
-      margin: 12px 0;
-      min-height: 2.2em;
-      font-weight: bold;
-      text-shadow: 0 0 8px #ffd60a;
-    }
-
-    button {
-      font-size: 1.5rem;
-      padding: 16px 40px;
-      margin: 8px;
-      border: none;
-      border-radius: 14px;
-      color: white;
+      transition: all 0.25s ease;
       cursor: pointer;
-      transition: all 0.2s;
     }
-    #startBtn  { background: #00d4ff; font-size: 1.65rem; }
-    #accelBtn  { background: #ffaa00; font-size: 1.85rem; padding: 22px 55px; box-shadow: 0 0 20px #ffaa00; }
-    #nitroBtn  { background: #ff2d00; font-size: 1.65rem; padding: 18px 45px; box-shadow: 0 0 25px #ff2d00; }
-    button:hover { transform: scale(1.1); }
-    button:active { transform: scale(0.92); }
-    button:disabled { background: #555; transform: none; }
-
-    .hidden { display: none; }
-    .speed {
-      font-size: 1.15rem;
-      color: #ffd60a;
-      margin-top: 8px;
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal-content {
+      background: #1f2937;
+      border-radius: 16px;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow: auto;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
   </style>
 </head>
-<body>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
 
-<h1>スロットカー対決！ 超楽しい版 🏎️🔥</h1>
-<p style="color:#aaa; margin-bottom:15px;">NITROで爆速！　⚡パワーアップ出現！　勝ったら花火！<br>アクセル連打＋NITROで本家より熱いレース！</p>
+  <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <h1 class="text-4xl sm:text-5xl font-bold text-center mb-10 text-orange-400">
+      ヒカマニ画像データベース
+    </h1>
 
-<div id="track">
-  <div class="slot-line"></div>
-  <div id="finish">🏁</div>
-  <div id="player-car" class="car">🚗</div>
-  <div id="bot-car" class="car">🤖</div>
-</div>
+    <!-- 検索 -->
+    <div class="mb-10">
+      <input 
+        id="searchInput"
+        type="text"
+        placeholder="キーワード検索（例：驚く セイキン アナル ウホッ）"
+        class="w-full p-4 text-lg bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30"
+      />
+    </div>
 
-<div id="info">準備OK！　スタートしてアクセル連打＋NITROでぶっ飛ばせ！</div>
-<div class="speed" id="speedDisplay">あなたの速度: 0　｜　BOT速度: 0</div>
+    <!-- お気に入りエリア -->
+    <section class="mb-16">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-3xl font-bold flex items-center gap-3">
+          <span>❤️ お気に入り</span>
+          <span id="favCount" class="text-xl text-gray-400">(0)</span>
+        </h2>
+        <button 
+          onclick="clearFavorites()"
+          class="px-4 py-2 bg-red-700 hover:bg-red-600 rounded-lg text-sm font-medium transition"
+        >
+          すべてクリア
+        </button>
+      </div>
+      <div id="favoritesGallery" class="gallery"></div>
+    </section>
 
-<button id="startBtn">スタート！</button>
-<button id="accelBtn">アクセル<br>（押して加速）</button>
-<button id="nitroBtn">NITRO！<br>（一発爆速）</button>
-<button id="resetBtn" class="hidden">もう一回レース</button>
+    <!-- メインギャラリー -->
+    <div id="mainGallery" class="gallery"></div>
+  </div>
 
-<script>
-const track       = document.getElementById('track');
-const playerCar   = document.getElementById('player-car');
-const botCar      = document.getElementById('bot-car');
-const info        = document.getElementById('info');
-const speedDisp   = document.getElementById('speedDisplay');
-const startBtn    = document.getElementById('startBtn');
-const accelBtn    = document.getElementById('accelBtn');
-const nitroBtn    = document.getElementById('nitroBtn');
-const resetBtn    = document.getElementById('resetBtn');
+  <!-- 画像モーダル -->
+  <div id="modal" class="modal">
+    <div class="modal-content p-6 sm:p-8 relative">
+      <button 
+        onclick="closeModal()"
+        class="absolute top-4 right-4 text-4xl text-gray-400 hover:text-white transition"
+      >×</button>
 
-let TRACK_WIDTH = 0;
-let FINISH_LINE = 0;
-let playerPos = 0;
-let botPos = 0;
-let playerSpeed = 0;
-let botSpeed = 0;
-let isAccelerating = false;
-let holdDuration = 0;
-let gameRunning = false;
-let lastTime = 0;
-let powerup = null;
-let powerupCollected = false;
-let overtook = false;
+      <img id="modalImg" class="w-full max-h-[60vh] object-contain rounded-xl mb-6 mx-auto" alt="拡大画像">
 
-function createPowerup() {
-  if (powerup) powerup.remove();
-  powerup = document.createElement('div');
-  powerup.className = 'powerup';
-  powerup.textContent = '⚡';
-  powerup.style.left = (FINISH_LINE * (0.38 + Math.random() * 0.3)) + 'px'; // 38%〜68%のランダム位置
-  track.appendChild(powerup);
-  powerupCollected = false;
-}
+      <h3 id="modalTitle" class="text-2xl font-bold mb-3"></h3>
+      <p id="modalDesc" class="text-gray-300 mb-4"></p>
+      
+      <div id="modalTags" class="flex flex-wrap gap-2 mb-6"></div>
 
-function launchConfetti() {
-  const emojis = ['🎉', '✨', '🏆', '🚗', '🔥'];
-  for (let i = 0; i < 180; i++) {
-    const c = document.createElement('div');
-    c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-    c.style.position = 'fixed';
-    c.style.left = Math.random() * 100 + 'vw';
-    c.style.top = '-30px';
-    c.style.fontSize = (18 + Math.random() * 22) + 'px';
-    c.style.zIndex = 9999;
-    c.style.transition = `all ${Math.random() * 3 + 2.5}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
-    document.body.appendChild(c);
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button 
+          onclick="downloadCurrent()"
+          class="flex-1 bg-orange-600 hover:bg-orange-500 py-4 rounded-xl font-bold text-lg transition"
+        >
+          ⬇️ ダウンロード
+        </button>
+        <button 
+          id="favBtn"
+          onclick="toggleFavoriteCurrent()"
+          class="flex-1 bg-pink-600 hover:bg-pink-500 py-4 rounded-xl font-bold text-lg transition"
+        >
+          ❤️ お気に入りに追加
+        </button>
+      </div>
+    </div>
+  </div>
 
-    setTimeout(() => {
-      c.style.top = '110vh';
-      c.style.transform = `rotate(${Math.random() * 1200 - 300}deg)`;
-      c.style.opacity = 0;
-    }, 30);
-  }
-}
+  <script>
+    // ── データ（ここに画像を追加してください） ────────────────────────────────
+    const database = [
+      {
+        id: 1,
+        title: "ヒカキン 超驚き顔",
+        tags: ["驚く", "ヒカキン", "定番"],
+        desc: "ほぼ毎動画に出てくるあの顔",
+        url: "images/hikakin_odoroki_001.jpg"
+      },
+      {
+        id: 2,
+        title: "セイキン アナル言いそう",
+        tags: ["セイキン", "アナル", "語録"],
+        desc: "言っちゃいそうな瞬間",
+        url: "images/seikin_anaru_moment.jpg"
+      },
+      {
+        id: 3,
+        title: "ウホッッ！！",
+        tags: ["ウホッ", "効果音", "名シーン"],
+        desc: "伝説のウホッ",
+        url: "images/uho.jpg"
+      },
+      // ここに好きなだけ追加してください
+      // 例：
+      // {
+      //   id: 999,
+      //   title: "新しいネタ",
+      //   tags: ["新作", "2026"],
+      //   desc: "最新のやつ",
+      //   url: "images/2026_new.jpg"
+      // },
+    ];
 
-function resetGame() {
-  playerPos = 0;
-  botPos = 0;
-  playerSpeed = 0;
-  botSpeed = 0;
-  isAccelerating = false;
-  holdDuration = 0;
-  overtook = false;
-  playerCar.style.left = '0px';
-  botCar.style.left = '0px';
-  playerCar.textContent = '🚗';
-  botCar.textContent = '🤖';
-  info.textContent = "準備OK！　スタートしてアクセル連打＋NITROでぶっ飛ばせ！";
-  speedDisp.textContent = "あなたの速度: 0　｜　BOT速度: 0";
-  startBtn.disabled = false;
-  accelBtn.disabled = true;
-  nitroBtn.disabled = true;
-  resetBtn.classList.add('hidden');
-  if (powerup) powerup.remove();
-  powerup = null;
-  gameRunning = false;
-}
+    let currentItem = null;
+    let favorites = JSON.parse(localStorage.getItem("hikamani_favs") || "[]");
 
-function updatePositions(timestamp) {
-  if (!gameRunning) return;
-  if (!lastTime) lastTime = timestamp;
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
-  lastTime = timestamp;
+    // ── ギャラリー描画 ───────────────────────────────────────────────────────
+    function renderGallery(items, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
 
-  // プレイヤー
-  if (isAccelerating) {
-    playerSpeed += 21 * dt;
-    holdDuration += dt;
-    if (holdDuration > 1.15 && Math.random() < 0.16) {
-      playerSpeed *= 0.25;
-      info.textContent = "⚠️ コースアウト！　大減速…";
-      holdDuration = 0;
+      if (items.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 col-span-full py-12">まだアイテムがありません</p>`;
+        return;
+      }
+
+      items.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <img src="${item.url}" alt="${item.title}" loading="lazy">
+          <div class="p-4">
+            <h4 class="font-bold mb-2">${item.title}</h4>
+            <div class="flex flex-wrap gap-1">
+              ${item.tags.map(t => `<span class="text-xs bg-gray-700 px-2 py-0.5 rounded">${t}</span>`).join("")}
+            </div>
+          </div>
+        `;
+        div.onclick = () => openModal(item);
+        container.appendChild(div);
+      });
     }
-  } else {
-    holdDuration = 0;
-  }
-  playerSpeed *= 0.925;
-  playerSpeed = Math.max(0, Math.min(playerSpeed, 42));
-  playerPos += playerSpeed * dt * 1450;
-  playerPos = Math.min(playerPos, FINISH_LINE + 60);
 
-  // パワーアップ判定
-  if (powerup && !powerupCollected) {
-    const puLeft = parseFloat(powerup.style.left);
-    if (playerPos > puLeft - 30 && playerPos < puLeft + 50) {
-      powerupCollected = true;
-      powerup.style.transition = 'all 0.4s';
-      powerup.style.transform = 'scale(3)';
-      powerup.style.opacity = '0';
-      setTimeout(() => { if (powerup) powerup.remove(); }, 500);
-      playerSpeed += 22;
-      info.innerHTML = "⚡ <strong>パワーアップゲット！</strong> 爆速になった！！";
+    // ── 検索 ─────────────────────────────────────────────────────────────────
+    document.getElementById("searchInput").addEventListener("input", e => {
+      const q = e.target.value.toLowerCase().trim();
+      if (!q) {
+        renderGallery(database, "mainGallery");
+        return;
+      }
+
+      const filtered = database.filter(item =>
+        item.title.toLowerCase().includes(q) ||
+        item.desc.toLowerCase().includes(q) ||
+        item.tags.some(t => t.toLowerCase().includes(q))
+      );
+
+      renderGallery(filtered, "mainGallery");
+    });
+
+    // ── モーダル操作 ─────────────────────────────────────────────────────────
+    function openModal(item) {
+      currentItem = item;
+      document.getElementById("modal").style.display = "flex";
+      document.getElementById("modalImg").src = item.url;
+      document.getElementById("modalImg").alt = item.title;
+      document.getElementById("modalTitle").textContent = item.title;
+      document.getElementById("modalDesc").textContent = item.desc;
+
+      const tagsDiv = document.getElementById("modalTags");
+      tagsDiv.innerHTML = item.tags
+        .map(t => `<span class="bg-gray-700 px-3 py-1 rounded text-sm">${t}</span>`)
+        .join("");
+
+      updateFavoriteButton();
     }
-  }
 
-  // オーバーテイク演出
-  if (!overtook && playerPos > botPos + 35) {
-    overtook = true;
-    info.textContent = "💨 オーバーテイク成功！　ナイス！";
-  }
-
-  // BOT（自然減速＋ミス多め）
-  botSpeed *= 0.88;
-  if (Math.random() < 0.52) {
-    botSpeed += (Math.random() * 0.48 + 0.38);
-  } else {
-    botSpeed *= 0.18;
-    if (Math.random() < 0.35) info.textContent = "🤖 BOTがコースアウト！";
-  }
-  botSpeed = Math.min(botSpeed, 11.5);
-  botPos += botSpeed * dt * 1080;
-  botPos = Math.min(botPos, FINISH_LINE + 60);
-
-  // 表示更新
-  playerCar.style.left = playerPos + 'px';
-  botCar.style.left = botPos + 'px';
-  speedDisp.textContent = `あなたの速度: ${Math.floor(playerSpeed)}　｜　BOT速度: ${Math.floor(botSpeed)}`;
-
-  // 勝敗
-  if (playerPos >= FINISH_LINE || botPos >= FINISH_LINE) {
-    gameRunning = false;
-    accelBtn.disabled = true;
-    nitroBtn.disabled = true;
-    isAccelerating = false;
-
-    if (playerPos >= FINISH_LINE && botPos < FINISH_LINE - 35) {
-      info.innerHTML = "🎉 <strong>あなたの圧勝！！</strong>　神プレイ！！";
-      playerCar.textContent = "🚗✨🔥";
-      launchConfetti();
-    } else if (botPos >= FINISH_LINE && playerPos < FINISH_LINE - 35) {
-      info.innerHTML = "😢 BOTの勝利…　次はNITROを上手に使おう！";
-      botCar.textContent = "🤖🏆";
-    } else {
-      info.textContent = "ドロー！　激アツ接戦だった！！";
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+      currentItem = null;
     }
-    resetBtn.classList.remove('hidden');
-    return;
-  }
 
-  requestAnimationFrame(updatePositions);
-}
+    // ── お気に入り ───────────────────────────────────────────────────────────
+    function isFavorite(id) {
+      return favorites.some(f => f.id === id);
+    }
 
-// 操作
-accelBtn.addEventListener('mousedown', () => { if (gameRunning) isAccelerating = true; });
-accelBtn.addEventListener('mouseup', () => { isAccelerating = false; });
-accelBtn.addEventListener('mouseleave', () => { isAccelerating = false; });
-accelBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameRunning) isAccelerating = true; });
-accelBtn.addEventListener('touchend', () => { isAccelerating = false; });
+    function toggleFavorite(item) {
+      const idx = favorites.findIndex(f => f.id === item.id);
+      if (idx === -1) {
+        favorites.push(item);
+      } else {
+        favorites.splice(idx, 1);
+      }
+      localStorage.setItem("hikamani_favs", JSON.stringify(favorites));
+      updateFavoriteButton();
+      renderGallery(favorites, "favoritesGallery");
+      document.getElementById("favCount").textContent = `(${favorites.length})`;
+    }
 
-nitroBtn.onclick = () => {
-  if (!gameRunning) return;
-  playerSpeed += 28;
-  playerCar.textContent = '🚗🔥';
-  setTimeout(() => { if (gameRunning) playerCar.textContent = '🚗'; }, 700);
+    function toggleFavoriteCurrent() {
+      if (currentItem) toggleFavorite(currentItem);
+    }
 
-  if (Math.random() < 0.28) {
-    playerSpeed *= 0.15;
-    info.textContent = "NITRO失敗！　大クラッシュ😱";
-  } else {
-    info.textContent = "NITRO発動！！　爆速モード！！";
-  }
-};
+    function updateFavoriteButton() {
+      if (!currentItem) return;
+      const btn = document.getElementById("favBtn");
+      const isFav = isFavorite(currentItem.id);
+      btn.textContent = isFav ? "❤️ お気に入りから削除" : "❤️ お気に入りに追加";
+      btn.classList.toggle("bg-pink-600", !isFav);
+      btn.classList.toggle("hover:bg-pink-500", !isFav);
+      btn.classList.toggle("bg-red-600", isFav);
+      btn.classList.toggle("hover:bg-red-500", isFav);
+    }
 
-startBtn.onclick = () => {
-  TRACK_WIDTH = track.clientWidth - 110;
-  FINISH_LINE = TRACK_WIDTH * 1.85;
+    function clearFavorites() {
+      if (!confirm("お気に入りをすべて削除しますか？")) return;
+      favorites = [];
+      localStorage.removeItem("hikamani_favs");
+      renderGallery([], "favoritesGallery");
+      document.getElementById("favCount").textContent = "(0)";
+      if (currentItem) updateFavoriteButton();
+    }
 
-  resetGame();
-  gameRunning = true;
-  playerSpeed = 0;
-  botSpeed = 1.2 + Math.random() * 1.8;
-  holdDuration = 0;
-  overtook = false;
+    // ── ダウンロード ─────────────────────────────────────────────────────────
+    function downloadCurrent() {
+      if (!currentItem) return;
+      const a = document.createElement("a");
+      a.href = currentItem.url;
+      a.download = `${currentItem.title.replace(/[\s/\\?%*:|"<>]/g, "_")}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
-  createPowerup();
-
-  info.textContent = "レース開始！　アクセル連打＋NITRO＋⚡で最速を目指せ！";
-  startBtn.disabled = true;
-  accelBtn.disabled = false;
-  nitroBtn.disabled = false;
-
-  lastTime = 0;
-  requestAnimationFrame(updatePositions);
-};
-
-resetBtn.onclick = resetGame;
-
-resetGame();
-</script>
-
+    // ── 初期表示 ─────────────────────────────────────────────────────────────
+    renderGallery(database, "mainGallery");
+    renderGallery(favorites, "favoritesGallery");
+    document.getElementById("favCount").textContent = `(${favorites.length})`;
+  </script>
 </body>
 </html>
