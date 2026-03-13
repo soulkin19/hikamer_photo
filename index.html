@@ -121,8 +121,19 @@
   </div>
 
   <script>
-    // ── データ（ここに画像を追加してください） ────────────────────────────────
-    const database = [
+    // =============================================================
+    //          ★ データ追加はここだけ編集してください ★
+    // =============================================================
+    // やり方：
+    //   1. 下の配列に {} をコピペして追加
+    //   2. id は連番でOK（重複しなければ何でも可）
+    //   3. url は images/ファイル名.jpg の形式
+    //   4. タグは好きなだけ追加可能
+
+    const hikamaniItems = [
+
+      // ───────────── ここから実際のデータ ─────────────
+
       {
         id: 1,
         title: "ヒカキン 超驚き顔",
@@ -130,6 +141,7 @@
         desc: "ほぼ毎動画に出てくるあの顔",
         url: "images/hikakin_odoroki_001.jpg"
       },
+
       {
         id: 2,
         title: "セイキン アナル言いそう",
@@ -137,6 +149,7 @@
         desc: "言っちゃいそうな瞬間",
         url: "images/seikin_anaru_moment.jpg"
       },
+
       {
         id: 3,
         title: "ウホッッ！！",
@@ -144,21 +157,58 @@
         desc: "伝説のウホッ",
         url: "images/uho.jpg"
       },
-      // ここに好きなだけ追加してください
-      // 例：
-      // {
-      //   id: 999,
-      //   title: "新しいネタ",
-      //   tags: ["新作", "2026"],
-      //   desc: "最新のやつ",
-      //   url: "images/2026_new.jpg"
-      // },
+
+      // ───────────── ここから下に新しいのを追加 ─────────────
+      //          （Ctrl+C → Ctrl+V で簡単に増やせます）
+
+      /*
+      // コピペ用テンプレート
+      {
+        id: 4,
+        title: "タイトルをここに",
+        tags: ["タグ1", "タグ2", "タグ3"],
+        desc: "簡単な説明文",
+        url: "images/ファイル名.jpg"
+      },
+      */
+
+      // 例（実際に追加する場合）
+      /*
+      {
+        id: 4,
+        title: "ヒカキン ガチギレ",
+        tags: ["怒り", "ヒカキン", "レア"],
+        desc: "珍しい本気ギレ顔",
+        url: "images/hikakin_gachigire.jpg"
+      },
+      {
+        id: 5,
+        title: "マスオさん登場",
+        tags: ["マスオ", "家族", "定番"],
+        desc: "いつものマスオさん",
+        url: "images/masuo_登場.jpg"
+      },
+      */
+
+      // ↑ 好きなだけここに追加してください
     ];
+
+    // idが抜けていた場合のフォールバック（ほぼ使わないはず）
+    const database = hikamaniItems.map((item, index) => ({
+      id: item.id ?? (index + 10000),
+      title: item.title || "無題",
+      tags: item.tags || [],
+      desc: item.desc || "説明なし",
+      url: item.url || ""
+    }));
+
+    // =============================================================
+    //          ここから下は編集不要（ロジック部分）
+    // =============================================================
 
     let currentItem = null;
     let favorites = JSON.parse(localStorage.getItem("hikamani_favs") || "[]");
 
-    // ── ギャラリー描画 ───────────────────────────────────────────────────────
     function renderGallery(items, containerId) {
       const container = document.getElementById(containerId);
       container.innerHTML = "";
@@ -185,7 +235,6 @@
       });
     }
 
-    // ── 検索 ─────────────────────────────────────────────────────────────────
     document.getElementById("searchInput").addEventListener("input", e => {
       const q = e.target.value.toLowerCase().trim();
       if (!q) {
@@ -202,7 +251,6 @@
       renderGallery(filtered, "mainGallery");
     });
 
-    // ── モーダル操作 ─────────────────────────────────────────────────────────
     function openModal(item) {
       currentItem = item;
       document.getElementById("modal").style.display = "flex";
@@ -224,7 +272,6 @@
       currentItem = null;
     }
 
-    // ── お気に入り ───────────────────────────────────────────────────────────
     function isFavorite(id) {
       return favorites.some(f => f.id === id);
     }
@@ -266,7 +313,6 @@
       if (currentItem) updateFavoriteButton();
     }
 
-    // ── ダウンロード ─────────────────────────────────────────────────────────
     function downloadCurrent() {
       if (!currentItem) return;
       const a = document.createElement("a");
@@ -277,7 +323,7 @@
       document.body.removeChild(a);
     }
 
-    // ── 初期表示 ─────────────────────────────────────────────────────────────
+    // 初期表示
     renderGallery(database, "mainGallery");
     renderGallery(favorites, "favoritesGallery");
     document.getElementById("favCount").textContent = `(${favorites.length})`;
