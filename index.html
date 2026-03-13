@@ -52,9 +52,12 @@
 <body class="bg-gray-950 text-gray-100 min-h-screen">
 
   <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-    <h1 class="text-4xl sm:text-5xl font-bold text-center mb-10 text-orange-400">
+    <h1 class="text-4xl sm:text-5xl font-bold text-center mb-4 text-orange-400">
       ヒカマニ画像データベース
     </h1>
+    <p class="text-center text-xl text-gray-300 mb-10">
+      全てのヒカマニ画像を、ここで
+    </p>
 
     <!-- 検索 -->
     <div class="mb-10">
@@ -127,12 +130,12 @@
     // やり方：
     //   1. 下の配列に {} をコピペして追加
     //   2. id は連番でOK（重複しなければ何でも可）
-    //   3. url は images/ファイル名.jpg の形式
+    //   3. url は https://github.com/... ?raw=true 形式 または相対パス images/xxx.jpg
     //   4. タグは好きなだけ追加可能
 
     const hikamaniItems = [
 
-      // ───────────── ここから実際のデータ ─────────────
+      // ───────────── 既存のデータ（変更なし） ─────────────
 
       {
         id: 1,
@@ -173,13 +176,62 @@
         desc: "マイクラ",
         url: "IMG_0094.jpeg"
       },
- {
+
+      {
         id: 6,
         title: "変顔",
         tags: ["ヒカキン", "変顔", "食品ロス"],
         desc: "変顔するヒカキン",
         url: "IMG_0091.png"
       },
+
+      // ───────────── id:7〜50 の空テンプレート（ここから追加してください） ─────────────
+      // 必要な分だけ title / tags / desc / url を埋めてください
+
+      { id: 7, title: "", tags: [], desc: "", url: "" },
+      { id: 8, title: "", tags: [], desc: "", url: "" },
+      { id: 9, title: "", tags: [], desc: "", url: "" },
+      { id: 10, title: "", tags: [], desc: "", url: "" },
+      { id: 11, title: "", tags: [], desc: "", url: "" },
+      { id: 12, title: "", tags: [], desc: "", url: "" },
+      { id: 13, title: "", tags: [], desc: "", url: "" },
+      { id: 14, title: "", tags: [], desc: "", url: "" },
+      { id: 15, title: "", tags: [], desc: "", url: "" },
+      { id: 16, title: "", tags: [], desc: "", url: "" },
+      { id: 17, title: "", tags: [], desc: "", url: "" },
+      { id: 18, title: "", tags: [], desc: "", url: "" },
+      { id: 19, title: "", tags: [], desc: "", url: "" },
+      { id: 20, title: "", tags: [], desc: "", url: "" },
+      { id: 21, title: "", tags: [], desc: "", url: "" },
+      { id: 22, title: "", tags: [], desc: "", url: "" },
+      { id: 23, title: "", tags: [], desc: "", url: "" },
+      { id: 24, title: "", tags: [], desc: "", url: "" },
+      { id: 25, title: "", tags: [], desc: "", url: "" },
+      { id: 26, title: "", tags: [], desc: "", url: "" },
+      { id: 27, title: "", tags: [], desc: "", url: "" },
+      { id: 28, title: "", tags: [], desc: "", url: "" },
+      { id: 29, title: "", tags: [], desc: "", url: "" },
+      { id: 30, title: "", tags: [], desc: "", url: "" },
+      { id: 31, title: "", tags: [], desc: "", url: "" },
+      { id: 32, title: "", tags: [], desc: "", url: "" },
+      { id: 33, title: "", tags: [], desc: "", url: "" },
+      { id: 34, title: "", tags: [], desc: "", url: "" },
+      { id: 35, title: "", tags: [], desc: "", url: "" },
+      { id: 36, title: "", tags: [], desc: "", url: "" },
+      { id: 37, title: "", tags: [], desc: "", url: "" },
+      { id: 38, title: "", tags: [], desc: "", url: "" },
+      { id: 39, title: "", tags: [], desc: "", url: "" },
+      { id: 40, title: "", tags: [], desc: "", url: "" },
+      { id: 41, title: "", tags: [], desc: "", url: "" },
+      { id: 42, title: "", tags: [], desc: "", url: "" },
+      { id: 43, title: "", tags: [], desc: "", url: "" },
+      { id: 44, title: "", tags: [], desc: "", url: "" },
+      { id: 45, title: "", tags: [], desc: "", url: "" },
+      { id: 46, title: "", tags: [], desc: "", url: "" },
+      { id: 47, title: "", tags: [], desc: "", url: "" },
+      { id: 48, title: "", tags: [], desc: "", url: "" },
+      { id: 49, title: "", tags: [], desc: "", url: "" },
+      { id: 50, title: "", tags: [], desc: "", url: "" },
 
     ];
 
